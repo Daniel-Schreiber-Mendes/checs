@@ -5,50 +5,15 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/variadic/to_seq.hpp>
+#include <boost/preprocessor/cat.hpp>
+#include <boost/preprocessor/control/if.hpp>
 #include <checl/containers.h>
 
 
-
-//#define PositionComponent 1
-
-
-#ifndef MAX_ENTITYS
-	#define MAX_ENTITYS 1
-#endif 
-
-#ifndef COMPONENT_COUNT
-	#define COMPONENT_COUNT 1
-#endif 
-
-#ifndef SYSTEM_UPDATE_COUNT //number of systems with update CallType
-	#define SYSTEM_UPDATE_COUNT 1
-#endif 
-
-#ifndef SYSTEM_DRAW_COUNT //number of systems with update CallType
-	#define SYSTEM_DRAW_COUNT 1
-#endif 
-
-#ifndef TASK_UPDATE_COUNT //number of tasks with update CallType
-	#define TASK_UPDATE_COUNT 1
-#endif
-
-#ifndef TASK_DRAW_COUNT //number of tasks with draw CallType
-	#define TASK_DRAW_COUNT 1
-#endif
-
-
-#define TASK_COUNT TASK_DRAW_COUNT + TASK_UPDATE_COUNT
-#define SYSTEM_COUNT SYSTEM_DRAW_COUNT + SYSTEM_UPDATE_COUNT
-
-typedef enum
-{
-	PRE_UPDATE,
-	ON_UPDATE,
-	POST_UPDATE,
-	PRE_DRAW,
-	ON_DRAW,
-	POST_DRAW
-}CallbackType;
+//#undef size_t
+//#define size_t uint16_t
 
 
 typedef enum
@@ -58,32 +23,31 @@ typedef enum
 }CallType;
 
 
-typedef uint64_t ComponentKey;
-typedef uint64_t EntityId;
+typedef uint8_t ComponentKey; //8bits mean 8 components can be 
+typedef uint16_t EntityId;
 typedef uint8_t ComponentSignature; //the signature of a component. the signature depends on the order 
-									//of registering but is only important inside the ecs, not for the use
+									//of registering but is only important inside the ecs, not for the user
 
 
 typedef struct
 {
 	void* components;
 	ComponentSignature componentSignature;
-	uint16_t componentCount;
+	uint8_t size;
 	size_t componentSize; //size of component in bytes
 }ComponentArray;
 
 
 typedef struct
 {
-	ComponentArray* componentArrays;
-	uint8_t componentArrayCount;
+	ComponentArray* arrays;
+	uint8_t size;
 }ComponentTable;
 
 
 typedef struct
 {
 	bool active;
-	CallType callType;
 	void(*callback)(ComponentTable*);
 	ComponentTable componentTable;
 }System;
@@ -92,14 +56,13 @@ typedef struct
 typedef struct 
 {
 	bool active;
-	CallType callType;
 	void(*callback)(void);
 }Task;
 
 //#####################################################################################################entityManager.c
 
 
-void     entityManager_init(void);
+void     entityManager_init(EntityId const n_maxEntitys);
 EntityId entityManager_entity_generate(void);
 void     entityManager_entity_key_set(ComponentKey const key);
 void     entityManager_entity_erase(EntityId const e);
@@ -108,8 +71,9 @@ void     entityManager_entity_erase(EntityId const e);
 
 //##################################################################################################componentManager.c
 
-
-void    _componentManager_component_register(ComponentSignature const componentSignature, size_t const componentSize);
+void 			componentManager_init(uint8_t const n_componentCount);
+void    		_componentManager_component_register(ComponentSignature const componentSignature, size_t const componentSize);
+ComponentArray* _componentManager_componentArray_get(ComponentSignature const componentSignature);
 
 //gets size and name of component and passes it to create func
 #define componentManager_component_register(ComponentType)\
@@ -125,22 +89,32 @@ void    _componentManager_component_register(ComponentSignature const componentS
 void  componentTable_construct(void);
 void* componentTable_componentArray_get(ComponentSignature const componentSignature);
 
+#define componentTable_componentArray_foreach(array, ComponentType, element)\
+	ComponentType *const = (ComponentType*)(array)->components[0];\
+	for (uint8_t i=0; i < (array)->size; element = ((ComponentType*)(array)->components)[i + 1], ++i)
+
 
 //########################################################################################################systemManager.c
 
-
-
-void systemManager_system_register(void(*callback)(ComponentTable*), CallType const callType);
-void _systemManager_system_component_add(void(*callback)(ComponentTable*));
+void systemManager_init(uint8_t const n_systemUpdateCount, uint8_t const systemDrawCount, 
+						uint8_t const n_taskUpdateCount, uint8_t const n_taskDrawCount);
+void _systemManager_system_register(void(*callback)(ComponentTable*), CallType const callType);
+void _systemManager_system_component_add(void(*callback)(ComponentTable*), ComponentSignature const signature, size_t const size);
 void systemManager_systems_call(CallType const callType);
-
-#define systemManager_system_component_add(callback, ComponentType)\
-	_systemManager_system_component_add(callback, ComponentType##Component);
-	
-
 void systemManager_task_register(void(*callback)(void), CallType const callType);
 void systemManager_tasks_call(CallType const callType);
 
+#define systemManager_system_register(callback, CallType, ...)\
+	_systemManager_system_register(callback, CallType);\
+	BOOST_PP_SEQ_FOR_EACH(systemManager_system_component_add, callback, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+	//for each component that is passed call system_component_add with callback as its first argument and one 
+	//element of __VA_ARGS__ as the second
+
+#define systemManager_system_component_add(r, callback, ComponentType)\
+	_systemManager_system_component_add(callback, BOOST_PP_CAT(ComponentType, Component), sizeof(ComponentType));
+	//concatenate type name of the struct/component with `Component` which then gets replaced with 
+	//the signature that was previously defined by the user
+	//BOOST_PP_CAT is used instead of ## because ComponentType is an element of a BOOST_PP_SEQUENCE
 
 //###########################################################################################################
 

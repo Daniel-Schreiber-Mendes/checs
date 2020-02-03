@@ -1,12 +1,13 @@
  #include "ecs.h"
 
-
-static EntityId entitys[MAX_ENTITYS];
+static EntityId maxEntitys;
+static EntityId* entitys;
 static EntityId entityCounter = 0; //number of active entitys
 
-void entityManager_init(void)
+void entityManager_init(EntityId const n_maxEntitys)
 {
-
+	maxEntitys = n_maxEntitys;
+	entitys = (EntityId*)malloc(sizeof(EntityId) * n_maxEntitys);
 }
 
 
