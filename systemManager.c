@@ -2,41 +2,47 @@
 
 //decided to use AoS because in the iteration we work with one system before moving to the next one
 //->AoS is better for caching in this case
-static uint8_t systemUpdateCount; //number of systems that are called on update
-static uint8_t systemDrawCount; //number of systems that are called on draw
-static uint8_t systemCount; //total number of systems
+static uintST systemUpdateCount; //number of systems that are called on update
+static uintST systemDrawCount; //number of systems that are called on draw
+static uintST systemCount; //total number of systems
 static System* systems; //array of system callbacks
 static uint8_t systemTypeCounts[2] = {0}; 
 
-static uint8_t taskUpdateCount; //number of tasks that are called on update
-static uint8_t taskDrawCount; //number of tasks that are called on draw
-static uint8_t taskCount; //total number of tasks
+static uintST taskUpdateCount; //number of tasks that are called on update
+static uintST taskDrawCount; //number of tasks that are called on draw
+static uintST taskCount; //total number of tasks
 static Task*   tasks; //array of task callbacks
 static uint8_t taskTypeCounts[2] = {0}; //is used only at beginning of the program so system_task_register knows 
 // at which index to put the task into;
 //all update tasks are stored next to each other, the order is also the order they will get executed by
 // directly next to the last update tast, the first draw task begins
 
-void systemManager_init(uint8_t const n_systemUpdateCount, uint8_t const n_systemDrawCount, 
-						uint8_t const n_taskUpdateCount, uint8_t const n_taskDrawCount)
+void systemManager_init(uintST const n_systemUpdateCount, uintST const n_systemDrawCount, 
+						uintST const n_taskUpdateCount, uintST const n_taskDrawCount)
 {
 	systemUpdateCount   = n_systemUpdateCount;
 	systemDrawCount     = n_systemDrawCount;
 	systemCount         = systemUpdateCount + systemDrawCount;
-	systems             = (System*)malloc(sizeof(System) * systemCount);
+	systems             = (systemCount > 0) ? (System*)malloc_debug(sizeof(System) * systemCount) : NULL;
 	systemTypeCounts[1] = systemUpdateCount;
 
 	taskUpdateCount     = n_taskUpdateCount;
 	taskDrawCount       = n_taskDrawCount;
 	taskCount           = taskUpdateCount + taskDrawCount;
-	tasks               = (Task*)malloc(sizeof(Task) * taskCount);
+	tasks               = (taskCount > 0) ? (Task*)malloc_debug(sizeof(Task) * taskCount) : NULL;
 	taskTypeCounts[1]   = taskUpdateCount;
+
+	for(uintST i=0; i < systemCount; ++i)
+	{
+		vector_construct(&systems[i].entitys, sizeof(EntityId));
+	}
 }
 
 
-void _systemManager_system_register(void(*callback)(ComponentTable*), CallType const callType)
+void _systemManager_system_register(SystemCallback callback, CallType const callType)
 {
-	systems[systemTypeCounts[callType]++] = (System){.callback = callback, .active = true};
+	systems[systemTypeCounts[callType]].callback = callback;
+	systems[systemTypeCounts[callType]++].active = true;
 	//the system array consists of two parts. the first part is made of systems, that are called on update, 
 	//and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
 	//(number of systems that get called on update) and systemDrawCount. taskTypeCounts has two counter, each one for one system type
@@ -46,23 +52,51 @@ void _systemManager_system_register(void(*callback)(ComponentTable*), CallType c
 }
 
 
-void _systemManager_system_component_add(void(*callback)(ComponentTable*), ComponentSignature const signature, size_t const size)
+void systemManager_terminate(void)
 {
+	for(uintST i=0; i < systemCount; ++i)
+		vector_destruct(&systems[i].entitys);;
+	if(systems)
+		free_debug(systems);
+	if(tasks)
+		free_debug(tasks);
+}
 
+
+void _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature)
+{
+	for(uintST i=0; i < systemCount; ++i)
+		if(systems[i].callback == callback)
+			systems[i].key |= 1 << signature; 
+			//by or-ing the componentSignature and current system key the bit indicating this component in the key is set 
 }
 
 
 void systemManager_systems_call(CallType const callType)
 {
-	uint8_t i, iMax;
+	uintST i, iMax;
 	if(callType == UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
 	for(; i < iMax; ++i)
 		if (systems[i].active)
-			systems[i].callback(&systems[i].componentTable);
+			systems[i].callback(systems[i].entitys.data, systems[i].entitys.size);
 }
 
 
-void systemManager_task_register(void(*callback)(void), CallType const callType)
+void systemManager_systems_entity_add(EntityId const entity, ComponentKey const key)
+{
+	/*
+	for(uintEC i=1; i <= getBitCount(uintEC); ++i)
+	{
+		componentManager_sparseSet_get((1 << i) & key)->sparse[id] = id;
+	}
+	*/
+	for(uintST i=0; i < systemCount; ++i)
+		if((systems[i].key & ) == systems[i].key)
+		if(keyMatch)
+}
+
+
+void systemManager_task_register(TaskCallback const callback, CallType const callType)
 {
 	tasks[taskTypeCounts[callType]++] = (Task){.callback = callback, .active = true};
 }
@@ -71,7 +105,7 @@ void systemManager_task_register(void(*callback)(void), CallType const callType)
 void systemManager_tasks_call(CallType const callType)
 {
 	//the index starting point in the array depends on which type of task is called now
-	uint8_t i, iMax;
+	uintST i, iMax;
 	if(callType == UPDATE) { i = 0; iMax = taskUpdateCount; } else { i = taskUpdateCount; iMax = taskCount; }
 	for(; i < iMax; ++i)
 		if (tasks[i].active)

@@ -1,19 +1,29 @@
  #include "ecs.h"
 
-static EntityId maxEntitys;
-static EntityId* entitys;
-static EntityId entityCounter = 0; //number of active entitys
+static Stack unusedEntitys;
+static uintEC nextEntityId = 0; //next entityId that will be given. It is NOT the total number of currently used Entitys
+//because unused entitys are stored in the unused entitys stack
+//everytime a new entity is to be created, the entitymanager looks if there is already an entity on the unusedEntitys stack
+//and returns it. only if there are no unused entitys on the stack a completely new entity is used. Its basically Entity-Recycling
 
-void entityManager_init(EntityId const n_maxEntitys)
+void entityManager_init(EntityId const maxEntitys)
 {
-	maxEntitys = n_maxEntitys;
-	entitys = (EntityId*)malloc(sizeof(EntityId) * n_maxEntitys);
+	stack_construct(&unusedEntitys, sizeof(EntityId));
+	stack_reserve(&unusedEntitys, maxEntitys);
 }
 
 
-EntityId entityManager_entity_generate(void)
+void entityManager_terminate(void)
 {
-	return entityCounter++;
+	stack_destruct(&unusedEntitys);
+}
+
+
+EntityId _entityManager_entity_generate(ComponentKey const key)
+{
+	EntityId entity = stack_isEmpty(&unusedEntitys) ? nextEntityId++ : stack_element_pop(&unusedEntitys, EntityId);
+	systemManager_systems_entity_add(entity, key);
+	return entity;
 }
 
 
@@ -25,5 +35,6 @@ void entityManager_entity_key_set(ComponentKey const key)
 
 void entityManager_entity_erase(EntityId const e)
 {
-
+	stack_element_push(&unusedEntitys, EntityId, e);
+	systemManager_systems_update(e);
 }

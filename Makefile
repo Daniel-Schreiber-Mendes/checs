@@ -1,10 +1,10 @@
 
 
 LFLAGS = -shared -o
-CFLAGS = -c -fpic -std=c99
+CFLAGS = -c -g -fpic -std=c99
 
-make: 	       				   entityManager.o componentManager.o systemManager.o componentTable.o
-	gcc $(LFLAGS) libchecs.so entityManager.o componentManager.o systemManager.o componentTable.o -lchecl
+make: 	       				  entityManager.o componentManager.o systemManager.o
+	gcc $(LFLAGS) libchecs.so entityManager.o componentManager.o systemManager.o -lchecl
 	mv libchecs.so /usr/local/lib/
 	cp *.h /usr/local/include/checs/
 
@@ -16,6 +16,3 @@ systemManager.o: systemManager.c
 
 componentManager.o: componentManager.c
 	gcc $(CFLAGS) componentManager.c
-
-componentTable.o: componentTable.c
-	gcc $(CFLAGS) componentTable.c
