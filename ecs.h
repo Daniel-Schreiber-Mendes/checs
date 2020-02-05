@@ -82,6 +82,7 @@ typedef struct
 	bool active;
 	SystemCallback callback;
 	Vector entitys; //array of entitys it is interested in
+	uintEC entityCount;
 	ComponentKey key; //key shows which components at least an entity has to have to be processed by this system
 }System;
 
@@ -94,10 +95,10 @@ typedef struct
 
 
 #define getBitCount(type) sizeof(type) * 8
-#define keyMatch(requiredKey, providedKey) ({(requiredKey & providedKey) == requiredKey})
+#define keyMatch(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 
 
-void     entityManager_init(EntityId const maxEntitys);
+void     entityManager_init(void);
 void 	 entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey const key);
 void     entityManager_entity_key_set(ComponentKey const key);
@@ -109,9 +110,11 @@ void     entityManager_entity_erase(EntityId const e);
 //when we shift the number 1 three to the right, we get 0000 0100. Now we or the current key(because we have multiple signatures
 //that we want to set) we get the appropriate componentKey
 #define entityManager_entity_generate(...)\
+	({\
 	ComponentKey key = 0;\
 	BOOST_PP_SEQ_FOR_EACH(evaluateComponentKey, &key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
-	_entityManager_entity_generate(key);
+	_entityManager_entity_generate(key);\
+	})
 
 #define evaluateComponentKey(r, key, ComponentType)\
 	*(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
@@ -119,7 +122,7 @@ void     entityManager_entity_erase(EntityId const e);
 	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
 
 #define entityManager_foreach(entity)\
-	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[0], ++i)
+	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[i], ++i)
 //this will only be called inside a callback. 
 //The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 //this means one doesnt have to give the data as an argument since their name is already know.

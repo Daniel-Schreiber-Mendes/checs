@@ -42,6 +42,8 @@ void systemManager_init(uintST const n_systemUpdateCount, uintST const n_systemD
 void _systemManager_system_register(SystemCallback callback, CallType const callType)
 {
 	systems[systemTypeCounts[callType]].callback = callback;
+	systems[systemTypeCounts[callType]].entityCount = 0;
+	systems[systemTypeCounts[callType]].key = 0;
 	systems[systemTypeCounts[callType]++].active = true;
 	//the system array consists of two parts. the first part is made of systems, that are called on update, 
 	//and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
@@ -78,21 +80,20 @@ void systemManager_systems_call(CallType const callType)
 	if(callType == UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
 	for(; i < iMax; ++i)
 		if (systems[i].active)
-			systems[i].callback(systems[i].entitys.data, systems[i].entitys.size);
+			systems[i].callback(systems[i].entitys.data, systems[i].entityCount);
 }
 
 
 void systemManager_systems_entity_add(EntityId const entity, ComponentKey const key)
 {
-	/*
-	for(uintEC i=1; i <= getBitCount(uintEC); ++i)
-	{
-		componentManager_sparseSet_get((1 << i) & key)->sparse[id] = id;
-	}
-	*/
 	for(uintST i=0; i < systemCount; ++i)
-		if((systems[i].key & ) == systems[i].key)
-		if(keyMatch)
+	{
+		if(keyMatch(systems[i].key, key))
+		{
+			vector_element_push(&systems[i].entitys, uintEC, entity);
+			++systems[i].entityCount;
+		}
+	}
 }
 
 

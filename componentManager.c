@@ -29,7 +29,7 @@ void componentManager_terminate(void)
 void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize)
 {
 	//-1 because the signatures begin at 1 
-	SparseSet* set = &sets[signature - 1];
+	SparseSet* set = &sets[signature];
 	*set = (SparseSet){.componentSize = componentSize, .signature = signature};
 	set->sparse = malloc_debug(sizeof(uintEC) * 1);
 	set->dense = malloc_debug(set->componentSize * 1);
@@ -38,5 +38,5 @@ void _componentManager_component_register(ComponentSignature const signature, si
 
 SparseSet* componentManager_sparseSet_get(ComponentSignature const signature)
 {
-	return &sets[signature - 1];
+	return &sets[signature];
 }
