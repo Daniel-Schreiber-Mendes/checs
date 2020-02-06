@@ -22,7 +22,8 @@ void entityManager_terminate(void)
 EntityId _entityManager_entity_generate(ComponentKey const key)
 {
 	EntityId entity = stack_isEmpty(&unusedEntitys) ? nextEntityId++ : stack_element_pop(&unusedEntitys, EntityId);
-	systemManager_systems_entity_add(entity, key);
+	systemManager_entity_register(entity, key);
+	componentManager_entity_register(entity, key);
 	return entity;
 }
 
@@ -36,4 +37,5 @@ void entityManager_entity_key_set(ComponentKey const key)
 void entityManager_entity_erase(EntityId const e)
 {
 	stack_element_push(&unusedEntitys, EntityId, e);
+	//TODO: removing them from systems and sparseSets 
 }

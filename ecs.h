@@ -14,18 +14,24 @@
 //if DEBUG is defined, print memory allocations
 #define DEBUG
 
-
+//changes font color to blue, print message, reset font color
 #define malloc_debug(size)\
 ({\
-	printf("%lu bytes of memory were allocated in line %i in file %s\n", size, __LINE__, __FILE__ );\
+	printf("\033[0;34m");\
+	printf("bytes: %.4lu | allocated   | line: %.3i | file: %s\n", size, __LINE__, __FILE__ );\
+	printf("\033[0m");\
 	void* retVal = malloc((size));\
 	retVal;\
 })
-//because the newline only is printed if memory was allocated successfully, one can easyly see in the terminal if thee allocation failed
 
+//changes font color to green, print message, reset font color
 #define free_debug(p)\
-	printf("Memory was freed in line %i in file %s\n", __LINE__, __FILE__);\
-	free((p));
+({\
+	printf("\033[0;32m");\
+	printf("	      deallocated | line: %.3i | file: %s\n", __LINE__, __FILE__);\
+	printf("\033[0m");\
+	free((p));\
+})
 
 
 #ifndef DEBUG
@@ -68,8 +74,8 @@ typedef enum
 
 typedef struct
 {
-	EntityId* sparse; //sparse packed array of indices to dense array
-	void* dense; //dense array of components
+	Vector sparse; //sparse packed array of indices to dense array
+	Vector dense; //dense array of components
 	ComponentSignature signature; //signature of components that are stored
 	size_t componentSize; //size of components in bytes
 	uintEC capacity; //maximum number of elements
@@ -96,6 +102,7 @@ typedef struct
 
 #define getBitCount(type) sizeof(type) * 8
 #define keyMatch(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
+#define key_set(key, index) (key |= 1 << index)
 
 
 void     entityManager_init(void);
@@ -131,6 +138,7 @@ void     entityManager_entity_erase(EntityId const e);
 void componentManager_init(uintCS const n_componentCount);
 void componentManager_terminate(void);
 void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize);
+void componentManager_entity_register(EntityId const entity, ComponentKey const key);
 SparseSet* componentManager_sparseSet_get(ComponentSignature const signature);
 
 //gets size and name of component and passes it to create func
@@ -145,17 +153,18 @@ SparseSet* componentManager_sparseSet_get(ComponentSignature const signature);
 	//get the sparse array which is going to be indexed for this ComponentType
 
 #define componentManager_component_get(ComponentType, alias, entity)\
-	alias = &((ComponentType*)ComponentType##SparseSet->dense)[ComponentType##SparseSet->sparse[(entity)]];\
+	alias = &((ComponentType*)ComponentType##SparseSet->dense.data)[((uintEC*)ComponentType##SparseSet->sparse.data)[entity]];\
+	assert(alias);
 	//updating the value of the alias for a member of a component
 	//	printf("%p\n", ComponentType##SparseSet->dense);
 
 void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
-						uintST const n_taskUpdateCount, uintST const n_taskDrawCount);
+						uintST const n_taskUpdateCount, uintST const taskDrawCount);
 void systemManager_terminate(void);
 void _systemManager_system_register(SystemCallback callback, CallType const callType);
 void _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature);
 void systemManager_systems_call(CallType const callType);
-void systemManager_systems_entity_add(EntityId const entity, ComponentKey const key);
+void systemManager_entity_register(EntityId const entity, ComponentKey const key);
 void systemManager_task_register(TaskCallback const callback, CallType const callType);
 void systemManager_tasks_call(CallType const callType);
 
