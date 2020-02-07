@@ -45,10 +45,7 @@ void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDra
 	taskTypeCounts[1]   = taskUpdateCount;
 
 	for(uintST i=0; i < systemCount; ++i)
-	{
-		systems[i] = (System){.key = 0, .active = true, .entityCount = 0};
-		vector_construct(&systems->entitys, sizeof(EntityId));
-	}
+		system_construct(&systems[i]);
 }
 
 
@@ -59,7 +56,7 @@ void _systemManager_system_register(SystemCallback callback, CallType const call
 //the system array consists of two parts. the first part is made of systems, that are called on update, 
 //and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
 //(number of systems that get called on update) and systemDrawCount. taskTypeCounts has two counter, each one for one system type
-//to know where to insert newly registered systems. the counters are thus indices into the systems array. each time a new
+//to know where to add newly registered systems. the counters are thus indices into the systems array. each time a new
 //system of a type is registered, the counter for this type gets incremeneted by one so the next system that gets registered will be one 
 //the right of it(if they have the same sytem type)
 
@@ -67,7 +64,7 @@ void _systemManager_system_register(SystemCallback callback, CallType const call
 void systemManager_terminate(void)
 {
 	for(uintST i=0; i < systemCount; ++i)
-		vector_destruct(&systems[i].entitys);;
+		system_destruct(&systems[i]);
 	if(systems)
 		free_debug(systems);
 	if(tasks)
@@ -92,7 +89,7 @@ void systemManager_systems_call(CallType const callType)
 	if(callType == UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
 	for(; i < iMax; ++i)
 		if (systems[i].active)
-			systems[i].callback(systems[i].entitys.data, systems[i].entityCount);
+			systems[i].callback(systems[i].dense, systems[i].denseSize);
 }
 
 
@@ -100,10 +97,15 @@ void systemManager_entity_register(EntityId const entity, ComponentKey const key
 {
 	for(uintST i=0; i < systemCount; ++i)
 		if(keyMatch(systems[i].key, key))
-		{
-			vector_element_push(&systems[i].entitys, uintEC, entity);
-			++systems[i].entityCount;
-		}
+			system_entity_add(&systems[i], entity);
+}
+
+
+void systemManager_entity_erase(EntityId const entity)
+{
+	for(uintEC i=0; i < systemCount; ++i)
+		if(systems[i].sparse[entity])
+			system_entity_remove(&systems[i], entity);
 }
 
 

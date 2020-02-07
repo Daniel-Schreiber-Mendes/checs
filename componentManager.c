@@ -16,10 +16,7 @@ void componentManager_terminate(void)
 	if(sets)
 	{	
 		for(uintCS i=0; i < componentCount; ++i)
-		{
-			vector_destruct(&sets[i].sparse);
-			vector_destruct(&sets[i].dense);
-		}
+			sparseSet_destruct(&sets[i]);
 		free_debug(sets);
 	}
 }
@@ -27,25 +24,26 @@ void componentManager_terminate(void)
 
 void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize)
 {
-	SparseSet* set = &sets[signature];
-	*set = (SparseSet){.componentSize = componentSize, .signature = signature};
-	vector_construct(&set->dense, sizeof(uintEC));
-	vector_construct(&set->sparse, set->componentSize);
-	vector_reserve(&set->sparse, 8);
-	vector_reserve(&set->dense, 8);
+	sparseSet_construct(&sets[signature], componentSize, signature);
 }
 
 
 void componentManager_entity_register(EntityId const entity, ComponentKey const key)
 {
-	for(uintCS i=0; i < getBitCount(key); ++i)
+	for(uintCS i=0; i < componentCount; ++i)
 		if(keyMatch(1 << i, key))
-		{
-			vector_element_insert(&sets[i].sparse, EntityId, entity, entity);
-			vector_size_increment(&sets[i].dense);
-		}
+			sparseSet_entity_add(&sets[i], entity);
 
 }
+
+
+void componentManager_entity_erase(EntityId const entity)
+{
+	for(uintCS i=0; i < componentCount; ++i)
+		if(((uintEC*)sets[i].sparse)[entity])
+			sparseSet_entity_remove(&sets[i], entity);
+}
+
 
 
 SparseSet* componentManager_sparseSet_get(ComponentSignature const signature)

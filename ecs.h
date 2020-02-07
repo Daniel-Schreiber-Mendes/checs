@@ -61,34 +61,46 @@ typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum numb
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
 
+
 typedef enum
 {
 	UPDATE,
 	DRAW	
 }CallType; //specifies when the system/task is called
 
+
 typedef enum
 {
 	OWN //means a system owns a ComponentType, so they are stored and managed by the systems themselves
 }SystemType;
 
+
 typedef struct
 {
-	Vector sparse; //sparse packed array of indices to dense array
-	Vector dense; //dense array of components
+	uintEC* sparse; //sparse packed array of indices to dense array
+	uintEC sparseCapacity; //maximum number of elements
+
+	uintEC* dense; //dense array of components
+	uintEC denseCapacity; //maximum number of elements
+	uintEC denseSize; //current number of elements;
+
+	void* components;
 	ComponentSignature signature; //signature of components that are stored
-	size_t componentSize; //size of components in bytes
-	uintEC capacity; //maximum number of elements
-	uintEC size; //current number of elements;
+	size_t componentSize; //size of component
 }SparseSet;
 
 
 typedef struct
 {
+	uintEC* sparse; //sparse packed array of indices to dense array
+	uintEC sparseCapacity; //maximum number of elements
+
+	uintEC* dense; //dense array of entitys
+	uintEC denseCapacity; //maximum number of elements
+	uintEC denseSize; //current number of elements;
+
 	bool active;
-	SystemCallback callback;
-	Vector entitys; //array of entitys it is interested in
-	uintEC entityCount;
+	SystemCallback callback;	
 	ComponentKey key; //key shows which components at least an entity has to have to be processed by this system
 }System;
 
@@ -98,6 +110,10 @@ typedef struct
 	bool active;
 	TaskCallback callback;
 }Task;
+
+
+
+//TODO: Giving hints to systems about the number of components and entitys that are going to be used
 
 
 #define getBitCount(type) sizeof(type) * 8
@@ -140,7 +156,7 @@ void componentManager_terminate(void);
 void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize);
 void componentManager_entity_register(EntityId const entity, ComponentKey const key);
 SparseSet* componentManager_sparseSet_get(ComponentSignature const signature);
-
+void componentManager_entity_erase(EntityId const entity);
 //gets size and name of component and passes it to create func
 #define componentManager_component_register(ComponentType)\
 	_componentManager_component_register((ComponentType##Component), sizeof(ComponentType));
@@ -153,7 +169,7 @@ SparseSet* componentManager_sparseSet_get(ComponentSignature const signature);
 	//get the sparse array which is going to be indexed for this ComponentType
 
 #define componentManager_component_get(ComponentType, alias, entity)\
-	alias = &((ComponentType*)ComponentType##SparseSet->dense.data)[((uintEC*)ComponentType##SparseSet->sparse.data)[entity]];\
+	alias = &((ComponentType*)ComponentType##SparseSet->components)[ComponentType##SparseSet->sparse[entity]];\
 	assert(alias);
 	//updating the value of the alias for a member of a component
 	//	printf("%p\n", ComponentType##SparseSet->dense);
@@ -165,6 +181,7 @@ void _systemManager_system_register(SystemCallback callback, CallType const call
 void _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature);
 void systemManager_systems_call(CallType const callType);
 void systemManager_entity_register(EntityId const entity, ComponentKey const key);
+void systemManager_entity_erase(EntityId const entity);
 void systemManager_task_register(TaskCallback const callback, CallType const callType);
 void systemManager_tasks_call(CallType const callType);
 
@@ -181,7 +198,15 @@ void systemManager_tasks_call(CallType const callType);
 	//BOOST_PP_CAT is used instead of ## because ComponentType is an element of a BOOST_PP_SEQUENCE
 
 
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature);
+void sparseSet_destruct(SparseSet const *const set);
+void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
+void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
 
 
+void system_construct(System* sys);
+void system_destruct(System const *const sys);
+void system_entity_add(System *const sys, EntityId const entity);
+void system_entity_remove(System *const sys, EntityId const entity);
 
 #endif
