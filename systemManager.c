@@ -96,7 +96,7 @@ void systemManager_systems_call(CallType const callType)
 void systemManager_entity_register(EntityId const entity, ComponentKey const key)
 {
 	for(uintST i=0; i < systemCount; ++i)
-		if(keyMatch(systems[i].key, key))
+		if(key_match(systems[i].key, key))
 			system_entity_add(&systems[i], entity);
 }
 
@@ -104,7 +104,7 @@ void systemManager_entity_register(EntityId const entity, ComponentKey const key
 void systemManager_entity_erase(EntityId const entity)
 {
 	for(uintEC i=0; i < systemCount; ++i)
-		if(systems[i].sparse[entity])
+		if(key_match(systems[i].key, componentManager_key_get(entity)))
 			system_entity_remove(&systems[i], entity);
 }
 

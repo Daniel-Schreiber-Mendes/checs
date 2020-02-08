@@ -69,12 +69,6 @@ typedef enum
 }CallType; //specifies when the system/task is called
 
 
-typedef enum
-{
-	OWN //means a system owns a ComponentType, so they are stored and managed by the systems themselves
-}SystemType;
-
-
 typedef struct
 {
 	uintEC* sparse; //sparse packed array of indices to dense array
@@ -113,11 +107,14 @@ typedef struct
 
 
 
-//TODO: Giving hints to systems about the number of components and entitys that are going to be used
-
+//TODO: 
+// - Giving hints to systems about the number of components and entitys that are going to be used
+// - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
+//   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocationsd
+// 
 
 #define getBitCount(type) sizeof(type) * 8
-#define keyMatch(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
+#define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
 
@@ -132,6 +129,7 @@ void     entityManager_entity_erase(EntityId const e);
 //for example: Say a component has the signature 3. this means the third bit(counting from the right to left) has to be set.
 //when we shift the number 1 three to the right, we get 0000 0100. Now we or the current key(because we have multiple signatures
 //that we want to set) we get the appropriate componentKey
+
 #define entityManager_entity_generate(...)\
 	({\
 	ComponentKey key = 0;\
@@ -145,7 +143,7 @@ void     entityManager_entity_erase(EntityId const e);
 	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
 
 #define entityManager_foreach(entity)\
-	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[i], ++i)
+	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
 //this will only be called inside a callback. 
 //The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 //this means one doesnt have to give the data as an argument since their name is already know.
@@ -157,6 +155,7 @@ void _componentManager_component_register(ComponentSignature const signature, si
 void componentManager_entity_register(EntityId const entity, ComponentKey const key);
 SparseSet* componentManager_sparseSet_get(ComponentSignature const signature);
 void componentManager_entity_erase(EntityId const entity);
+ComponentKey componentManager_key_get(EntityId const entity);
 //gets size and name of component and passes it to create func
 #define componentManager_component_register(ComponentType)\
 	_componentManager_component_register((ComponentType##Component), sizeof(ComponentType));
@@ -169,10 +168,9 @@ void componentManager_entity_erase(EntityId const entity);
 	//get the sparse array which is going to be indexed for this ComponentType
 
 #define componentManager_component_get(ComponentType, alias, entity)\
-	alias = &((ComponentType*)ComponentType##SparseSet->components)[ComponentType##SparseSet->sparse[entity]];\
-	assert(alias);
+	alias = &((ComponentType*)ComponentType##SparseSet->components)[ComponentType##SparseSet->sparse[entity]];
 	//updating the value of the alias for a member of a component
-	//	printf("%p\n", ComponentType##SparseSet->dense);
+
 
 void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);

@@ -20,10 +20,18 @@ void system_entity_add(System *const sys, EntityId const entity)
 {
 	if(entity >= sys->sparseCapacity)
 	{
-		sys->sparse = realloc(sys->sparse, sizeof(uintEC) * (entity + 8));
-		sys->sparseCapacity = entity + 8;
+		sys->sparse = realloc(sys->sparse, sizeof(uintEC) * entity * 2);
+		sys->sparseCapacity = entity * 2;
 	}
 	sys->sparse[entity] = sys->denseSize++;
+	if(sys->sparse[entity] >= sys->denseCapacity)
+	{
+		sys->dense = realloc(sys->dense, sizeof(EntityId) * entity * 2);
+		sys->denseCapacity = entity * 2;
+	}
+	sys->dense[sys->sparse[entity]] = entity;
+
+	//printf("%u, ", sys->dense[sys->sparse[entity]]);
 }
 
 
