@@ -1,7 +1,8 @@
 #include "ecs.h"
 
-//decided to use AoS because in the iteration we work with one system before moving to the next one
-//->AoS is better for caching in this case
+uintEC* system_max_entitys_hints;
+uintEC* system_max_entitys_devn_hints;
+
 static uintST systemUpdateCount; //number of systems that are called on update
 static uintST systemDrawCount; //number of systems that are called on draw
 static uintST systemCount; //total number of systems
@@ -49,18 +50,6 @@ void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDra
 }
 
 
-void _systemManager_system_register(SystemCallback callback, CallType const callType)
-{
-	systems[systemTypeCounts[callType]++].callback = callback;
-}
-//the system array consists of two parts. the first part is made of systems, that are called on update, 
-//and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
-//(number of systems that get called on update) and systemDrawCount. taskTypeCounts has two counter, each one for one system type
-//to know where to add newly registered systems. the counters are thus indices into the systems array. each time a new
-//system of a type is registered, the counter for this type gets incremeneted by one so the next system that gets registered will be one 
-//the right of it(if they have the same sytem type)
-
-
 void systemManager_terminate(void)
 {
 	for(uintST i=0; i < systemCount; ++i)
@@ -72,6 +61,24 @@ void systemManager_terminate(void)
 	//has to be checked if memory for the array was allocated because if e.g there are no tasks,
 	// 0 bytes of memory would be allocated which can not be handled properly
 }
+
+
+void systemManager_system_hints_give()
+{
+
+}
+
+
+void _systemManager_system_register(SystemCallback callback, CallType const callType)
+{
+	systems[systemTypeCounts[callType]++].callback = callback;
+}
+//the system array consists of two parts. the first part is made of systems, that are called on update, 
+//and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
+//(number of systems that get called on update) and systemDrawCount. taskTypeCounts has two counter, each one for one system type
+//to know where to add newly registered systems. the counters are thus indices into the systems array. each time a new
+//system of a type is registered, the counter for this type gets incremeneted by one so the next system that gets registered will be one 
+//the right of it(if they have the same sytem type)
 
 
 void _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature)

@@ -1,5 +1,8 @@
  #include "ecs.h"
 
+uintEC max_entitys_hint = 64; //default value that can be changed by giving hints
+uintEC max_entitys_devn_hint = 8; //default value that can be changed by giving hints
+
 static Stack unusedEntitys;
 static uintEC nextEntityId = 0; //next entityId that will be given. It is NOT the total number of currently used Entitys
 //because unused entitys are stored in the unused entitys stack
@@ -16,6 +19,13 @@ void entityManager_init(void)
 void entityManager_terminate(void)
 {
 	stack_destruct(&unusedEntitys);
+}
+
+
+void entityManager_hints_give(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
+{
+	max_entitys_hint = maxEntitysHint;
+	max_entitys_devn_hint = max_entitys_devn_hint;
 }
 
 

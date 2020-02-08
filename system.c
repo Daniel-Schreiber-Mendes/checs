@@ -30,8 +30,6 @@ void system_entity_add(System *const sys, EntityId const entity)
 		sys->denseCapacity = entity * 2;
 	}
 	sys->dense[sys->sparse[entity]] = entity;
-
-	//printf("%u, ", sys->dense[sys->sparse[entity]]);
 }
 
 

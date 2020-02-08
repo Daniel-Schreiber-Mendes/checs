@@ -1,5 +1,8 @@
 #include "ecs.h"
 
+uintEC* component_max_entitys_hints;
+uintEC* component_max_entitys_devn_hints;
+
 static SparseSet* sets;
 static uintCS componentCount;
 
@@ -9,11 +12,8 @@ static uintEC keysCapacity; //highest id that can be currently stored
 void componentManager_init(uintCS const n_componentCount)
 {
 	//if componentCount is 0 it is undefined behaviour
-	componentCount = n_componentCount;
-	sets =  malloc_debug(sizeof(SparseSet) * componentCount);
-
-	keysCapacity = 8;
-	keys = malloc_debug(sizeof(ComponentKey) * keysCapacity);
+	sets =  malloc_debug(sizeof(SparseSet) * (componentCount = n_componentCount));
+	keys = malloc_debug(sizeof(ComponentKey) * (keysCapacity = max_entitys_hint));
 }
 
 
@@ -26,6 +26,12 @@ void componentManager_terminate(void)
 }
 
 
+void componentManager_system_hints_give()
+{
+
+}
+
+
 void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize)
 {
 	sparseSet_construct(&sets[signature], componentSize, signature);
@@ -35,7 +41,7 @@ void _componentManager_component_register(ComponentSignature const signature, si
 void componentManager_entity_register(EntityId const entity, ComponentKey const key)
 {
 	if(entity >= keysCapacity)
-		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity *= 2));
+		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity += max_entitys_devn_hint));
 	keys[entity] = key;
 
 	for(uintCS i=0; i < componentCount; ++i)
