@@ -9,8 +9,10 @@ static uintEC nextEntityId = 0; //next entityId that will be given. It is NOT th
 //everytime a new entity is to be created, the entitymanager looks if there is already an entity on the unusedEntitys stack
 //and returns it. only if there are no unused entitys on the stack a completely new entity is used. Its basically Entity-Recycling
 
-void entityManager_init(void)
+void entityManager_init(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
 {
+	max_entitys_hint = maxEntitysHint;
+	max_entitys_devn_hint = max_entitys_devn_hint;
 	stack_construct(&unusedEntitys, sizeof(EntityId));
 	stack_reserve(&unusedEntitys, 16);
 }
@@ -19,13 +21,6 @@ void entityManager_init(void)
 void entityManager_terminate(void)
 {
 	stack_destruct(&unusedEntitys);
-}
-
-
-void entityManager_hints_give(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
-{
-	max_entitys_hint = maxEntitysHint;
-	max_entitys_devn_hint = max_entitys_devn_hint;
 }
 
 

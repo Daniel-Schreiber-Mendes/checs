@@ -1,8 +1,5 @@
 #include "ecs.h"
 
-uintEC* system_max_entitys_hints;
-uintEC* system_max_entitys_devn_hints;
-
 static uintST systemUpdateCount; //number of systems that are called on update
 static uintST systemDrawCount; //number of systems that are called on draw
 static uintST systemCount; //total number of systems
@@ -18,8 +15,6 @@ static uint8_t taskTypeCounts[2] = {0}; //is used only at beginning of the progr
 //all update tasks are stored next to each other, the order is also the order they will get executed by
 // directly next to the last update tast, the first draw task begins
 /* systems[] looks like this:
-
-
 Systems that are called on update	
 |					| Systems that are called on draw
 |					|					|
@@ -28,8 +23,6 @@ Systems that are called on update
 -----------------------------------------
 ^					^					^
 0           systemUpdateCount        systemCount
-
-
 */
 
 void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
@@ -44,9 +37,6 @@ void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDra
 	taskCount           = taskUpdateCount + taskDrawCount;
 	tasks               = (taskCount > 0) ? (Task*)malloc_debug(sizeof(Task) * taskCount) : NULL;
 	taskTypeCounts[1]   = taskUpdateCount;
-
-	for(uintST i=0; i < systemCount; ++i)
-		system_construct(&systems[i]);
 }
 
 
@@ -63,15 +53,9 @@ void systemManager_terminate(void)
 }
 
 
-void systemManager_system_hints_give()
+void _systemManager_system_register(SystemCallback callback, CallType const callType, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
 {
-
-}
-
-
-void _systemManager_system_register(SystemCallback callback, CallType const callType)
-{
-	systems[systemTypeCounts[callType]++].callback = callback;
+	system_construct(&systems[systemTypeCounts[callType]], callback, maxEntitysHint, maxEntitysDevnHint);
 }
 //the system array consists of two parts. the first part is made of systems, that are called on update, 
 //and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
@@ -95,7 +79,7 @@ void systemManager_systems_call(CallType const callType)
 	uintST i, iMax;
 	if(callType == UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
 	for(; i < iMax; ++i)
-		if (systems[i].active)
+		if(systems[i].active)
 			systems[i].callback(systems[i].dense, systems[i].denseSize);
 }
 

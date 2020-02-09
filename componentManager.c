@@ -1,8 +1,5 @@
 #include "ecs.h"
 
-uintEC* component_max_entitys_hints;
-uintEC* component_max_entitys_devn_hints;
-
 static SparseSet* sets;
 static uintCS componentCount;
 
@@ -23,12 +20,6 @@ void componentManager_terminate(void)
 		sparseSet_destruct(&sets[i]);
 	free_debug(sets);
 	free_debug(keys);
-}
-
-
-void componentManager_system_hints_give()
-{
-
 }
 
 

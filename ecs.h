@@ -81,6 +81,8 @@ typedef struct
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
+	uintEC max_components_devn_hints;
+
 	void* components;
 	ComponentSignature signature; //signature of components that are stored
 	size_t componentSize; //size of component
@@ -95,6 +97,8 @@ typedef struct
 	uintEC* dense; //dense array of entitys
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
+
+	uintEC maxEntitysDevnHint;
 
 	bool active;
 	SystemCallback callback;	
@@ -120,19 +124,12 @@ typedef struct
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
-#define NO_HINT 0
-
 extern uintEC max_entitys_hint;
 extern uintEC max_entitys_devn_hint;
-extern uintEC* system_max_entitys_hints;
-extern uintEC* system_max_entitys_devn_hints;
-extern uintEC* component_max_entitys_hints;
-extern uintEC* component_max_entitys_devn_hints;
 
 
-void      entityManager_init(void);
+void      entityManager_init(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void 	  entityManager_terminate(void);
-void 	  entityManager_hints_give(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 EntityId _entityManager_entity_generate(ComponentKey const key);
 void      entityManager_entity_key_set(ComponentKey const key);
 void      entityManager_entity_erase(EntityId const e);
@@ -144,13 +141,11 @@ void      entityManager_entity_erase(EntityId const e);
 	_entityManager_entity_generate(key);\
 	})
 
-#define   evaluateComponentKey(r, key, ComponentType)\
-	*(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
+#define   evaluateComponentKey(r, key, ComponentType) *(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
 	//before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
 	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
 
-#define   entityManager_foreach(entity)\
-	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
+#define   entityManager_foreach(entity) for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
 //this will only be called inside a callback. 
 //The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 //this means one doesnt have to give the data as an argument since their name is already know.
@@ -158,15 +153,17 @@ void      entityManager_entity_erase(EntityId const e);
 
 void 		 componentManager_init(uintCS const n_componentCount);
 void 		 componentManager_terminate(void);
-void 		 componentManager_component_hints_give();
 void 		_componentManager_component_register(ComponentSignature const signature, size_t const componentSize);
 void		 componentManager_entity_register(EntityId const entity, ComponentKey const key);
 SparseSet*   componentManager_sparseSet_get(ComponentSignature const signature);
 void         componentManager_entity_erase(EntityId const entity);
 ComponentKey componentManager_key_get(EntityId const entity);
 //gets size and name of component and passes it to create func
-#define 	 componentManager_component_register(ComponentType)\
-	_componentManager_component_register((ComponentType##Component), sizeof(ComponentType));
+#define 	 componentManager_components_register(...)\
+	BOOST_PP_SEQ_FOR_EACH(component_register, 0, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__));
+
+#define component_register(r, data, ComponentType)\
+	_componentManager_component_register(BOOST_PP_CAT(ComponentType, Component), sizeof(ComponentType));
 
 //@alias is the alias that is going to be used for the component, like for example pos, or vel
 #define 	 componentManager_component_use(ComponentType, alias)\
@@ -183,8 +180,7 @@ ComponentKey componentManager_key_get(EntityId const entity);
 void    systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);
 void    systemManager_terminate(void);
-void    systemManager_system_hints_give();
-void   _systemManager_system_register(SystemCallback callback, CallType const callType);
+void   _systemManager_system_register(SystemCallback callback, CallType const callType, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void   _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature);
 void    systemManager_systems_call(CallType const callType);
 void    systemManager_entity_register(EntityId const entity, ComponentKey const key);
@@ -192,8 +188,8 @@ void    systemManager_entity_erase(EntityId const entity);
 void    systemManager_task_register(TaskCallback const callback, CallType const callType);
 void    systemManager_tasks_call(CallType const callType);
 
-#define systemManager_system_register(callback, CallType, ...)\
-	_systemManager_system_register(callback, CallType);\
+#define systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
+	_systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint);\
 	BOOST_PP_SEQ_FOR_EACH(systemManager_system_component_add, callback, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 	//for each component that is passed call system_component_add with callback as its first argument and one 
 	//element of __VA_ARGS__ as the second
@@ -210,7 +206,7 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
 
 
-void system_construct(System* sys);
+void system_construct(System *const sys, SystemCallback callback, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void system_destruct(System const *const sys);
 void system_entity_add(System *const sys, EntityId const entity);
 void system_entity_remove(System *const sys, EntityId const entity);
