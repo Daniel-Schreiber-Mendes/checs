@@ -3,14 +3,17 @@
 static SparseSet* sets;
 static uintCS componentCount;
 
-static ComponentKey* keys; //array of componentKeys
-static uintEC keysCapacity; //highest id that can be currently stored
+static uintEC maxEntitysDevnHint;
 
-void componentManager_init(uintCS const n_componentCount)
+ComponentKey* keys; //array of componentKeys
+uintEC keysCapacity; //highest id that can be currently stored
+
+void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint)
 {
 	//if componentCount is 0 it is undefined behaviour
+	maxEntitysDevnHint = n_maxEntitysDevnHint;
 	sets =  malloc_debug(sizeof(SparseSet) * (componentCount = n_componentCount));
-	keys = malloc_debug(sizeof(ComponentKey) * (keysCapacity = max_entitys_hint));
+	keys = malloc_debug(sizeof(ComponentKey) * (keysCapacity = maxEntitysHint));
 }
 
 
@@ -23,16 +26,17 @@ void componentManager_terminate(void)
 }
 
 
-void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize)
+void _componentManager_component_register(ComponentSignature const signature, size_t const componentSize, 
+										  uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint)
 {
-	sparseSet_construct(&sets[signature], componentSize, signature);
+	sparseSet_construct(&sets[signature], componentSize, signature, maxComponentsHint, maxComponentsDevnHint);
 }
 
 
 void componentManager_entity_register(EntityId const entity, ComponentKey const key)
 {
 	if(entity >= keysCapacity)
-		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity += max_entitys_devn_hint));
+		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity += maxEntitysDevnHint));
 	keys[entity] = key;
 
 	for(uintCS i=0; i < componentCount; ++i)
@@ -47,6 +51,8 @@ void componentManager_entity_erase(EntityId const entity)
 	for(uintCS i=0; i < componentCount; ++i)
 		if(key_match(1 << i, keys[entity]))
 			sparseSet_entity_remove(&sets[i], entity);
+	keys[entity] = 0; 
+	//set to 0 because otherwise when iterating over all entitys with a given component, an invalid entityId could be used
 }
 
 

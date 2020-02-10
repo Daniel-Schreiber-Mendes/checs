@@ -20,6 +20,16 @@
 	retVal;\
 })
 
+
+#define calloc_debug(num, size)\
+({\
+	printf("\033[0;34m");\
+	printf("bytes: %.4u | allocated   | line: %.3i | file: %s\n", (uint16_t)size, __LINE__, __FILE__ );\
+	printf("\033[0m");\
+	void* retVal = calloc((num), (size));\
+	retVal;\
+})
+
 //changes font color to green, print message, reset font color
 #define free_debug(p)\
 ({\
@@ -33,8 +43,10 @@
 #ifndef DEBUG
 	#undef free_debug
 	#undef malloc_debug
+	#undef calloc_debug
 	#define free_debug(p) free(p)
 	#define malloc_debug(size) malloc(size)
+	#define calloc_debug(num, size) calloc(num, size)
 #endif
 
 
@@ -81,7 +93,7 @@ typedef struct
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
-	uintEC max_components_devn_hints;
+	uintEC maxComponentsDevnHint;
 
 	void* components;
 	ComponentSignature signature; //signature of components that are stored
@@ -104,6 +116,8 @@ typedef struct
 	SystemCallback callback;	
 	ComponentKey key; //key shows which components at least an entity has to have to be processed by this system
 }System;
+//it is perfectly legal to create or erase an entity inside a system call. but there is no guarantee that the entity will be 
+//accessable during this call. because of this the components of an entity that just got created should not be modified during it
 
 
 typedef struct 
@@ -124,11 +138,11 @@ typedef struct
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
-extern uintEC max_entitys_hint;
-extern uintEC max_entitys_devn_hint;
+extern ComponentKey* keys; //in componentManager
+extern uintEC keysCapacity;  //in componentManager
 
 
-void      entityManager_init(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
+void      entityManager_init(void);
 void 	  entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey const key);
 void      entityManager_entity_key_set(ComponentKey const key);
@@ -151,19 +165,17 @@ void      entityManager_entity_erase(EntityId const e);
 //this means one doesnt have to give the data as an argument since their name is already know.
 //entity is only the alias that is going to be used for the entityId's inside the array
 
-void 		 componentManager_init(uintCS const n_componentCount);
+void 		 componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint);
 void 		 componentManager_terminate(void);
-void 		_componentManager_component_register(ComponentSignature const signature, size_t const componentSize);
+void 		_componentManager_component_register(ComponentSignature const signature, size_t const componentSize, 
+												 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint);
 void		 componentManager_entity_register(EntityId const entity, ComponentKey const key);
 SparseSet*   componentManager_sparseSet_get(ComponentSignature const signature);
 void         componentManager_entity_erase(EntityId const entity);
 ComponentKey componentManager_key_get(EntityId const entity);
 //gets size and name of component and passes it to create func
-#define 	 componentManager_components_register(...)\
-	BOOST_PP_SEQ_FOR_EACH(component_register, 0, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__));
-
-#define component_register(r, data, ComponentType)\
-	_componentManager_component_register(BOOST_PP_CAT(ComponentType, Component), sizeof(ComponentType));
+#define 	 componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint)\
+	_componentManager_component_register(ComponentType##Component, sizeof(ComponentType), maxComponentsHint, maxComponentsDevnHint);
 
 //@alias is the alias that is going to be used for the component, like for example pos, or vel
 #define 	 componentManager_component_use(ComponentType, alias)\
@@ -176,6 +188,15 @@ ComponentKey componentManager_key_get(EntityId const entity);
 	alias = &((ComponentType*)ComponentType##SparseSet->components)[ComponentType##SparseSet->sparse[entity]];
 	//updating the value of the alias for a member of a component
 
+#define 	 componentManager_componentMatches_foreach(entity, requiredKey)\
+	for(uintEC entity=0, key=keys[0]; entity < keysCapacity; key = keys[++entity])\
+		if(key_match(requiredKey, key))
+//entity is the alias that is going to be used for the next entity in the array that matches the key
+//iterates over all keys that exist. if one matches the required key, the code in the brackets after the if statement(the brackets 
+// and whats inside is written by the user) is executed. this basically iterates over all entitys and checks if their set of components
+//match with the required ones. For example: In the explode-system: a bomb explodes and every entity around it should get damage.
+//creating a system for this would be bad, because its callback is not called that often. So we just fetch all entitys everytime
+//we need this functionality. this results also in a much smaller memory use
 
 void    systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);
@@ -200,7 +221,8 @@ void    systemManager_tasks_call(CallType const callType);
 	//BOOST_PP_CAT is used instead of ## because ComponentType is an element of a BOOST_PP_SEQUENCE
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature);
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature, 
+						 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint);
 void sparseSet_destruct(SparseSet const *const set);
 void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);

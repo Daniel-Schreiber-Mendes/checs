@@ -1,18 +1,13 @@
  #include "ecs.h"
 
-uintEC max_entitys_hint = 64; //default value that can be changed by giving hints
-uintEC max_entitys_devn_hint = 8; //default value that can be changed by giving hints
-
 static Stack unusedEntitys;
 static uintEC nextEntityId = 0; //next entityId that will be given. It is NOT the total number of currently used Entitys
 //because unused entitys are stored in the unused entitys stack
 //everytime a new entity is to be created, the entitymanager looks if there is already an entity on the unusedEntitys stack
 //and returns it. only if there are no unused entitys on the stack a completely new entity is used. Its basically Entity-Recycling
 
-void entityManager_init(uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
+void entityManager_init(void)
 {
-	max_entitys_hint = maxEntitysHint;
-	max_entitys_devn_hint = max_entitys_devn_hint;
 	stack_construct(&unusedEntitys, sizeof(EntityId));
 	stack_reserve(&unusedEntitys, 16);
 }

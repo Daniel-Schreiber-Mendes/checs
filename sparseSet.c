@@ -1,11 +1,24 @@
 #include "ecs.h"
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature)
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature, 
+						 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint)
 {
-	*set = (SparseSet){.sparse = malloc_debug(sizeof(uintEC) * 8), .sparseCapacity = 8, 
-					   .dense = malloc_debug(sizeof(uintEC) * 8), .denseCapacity = 8, .denseSize = 0,
-				   .components = malloc_debug(componentSize * 8), .signature = signature, .componentSize = componentSize};
+	*set = (SparseSet)
+	{
+		.sparse = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
+		.sparseCapacity = 8, 
+
+		.dense = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
+		.denseCapacity = 8, 
+		.denseSize = 0,
+
+		.maxComponentsDevnHint = maxComponentsDevnHint,
+
+		.components = malloc_debug(componentSize * maxComponentsHint), 
+		.signature = signature, 
+		.componentSize = componentSize
+	};
 }
 
 
@@ -24,8 +37,8 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity)
 		set->sparse = realloc(set->sparse, sizeof(uintEC) * entity * 2);
 		set->sparseCapacity = entity * 2;
 	}
-	set->sparse[entity] = set->denseSize++;
-	if(set->sparse[entity] >= set->denseCapacity)
+
+	if((set->sparse[entity] = set->denseSize++) >= set->denseCapacity)
 	{
 		set->dense = realloc(set->dense, sizeof(uintEC) * entity * 2);
 		set->components = realloc(set->components, set->componentSize * entity * 2);

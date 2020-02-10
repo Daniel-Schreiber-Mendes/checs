@@ -17,7 +17,13 @@ void system_construct(System *const sys, SystemCallback callback, uintEC const m
 		.callback = callback
 	};
 }
-
+//maxEntitysHint tells the system how many entitys the system will approximately at its peak have. maxEntitysDevnHint stand for 
+//max-entitys-deviation-hint which says by how much the number of maxmimum entitys could differ. both numbers do not have to be correct.
+//if the maxmimum number of entitys is reached the system allocates the difference between the biggest entity currently in the system
+//and the new entity. to this number maxEntitysDevnHint is then added. This ensures, that there will always be enough memory for
+//the new entitys but it also aloccates not too much or to less because the user can specify how much 
+//he thinks the maxEntitys could differ. for the sparse set always the double amount of the memory that gets allocated for dense 
+//gets allocated because it needs to grow bigger in size since the entitys are not everytime next to each other
 
 void system_destruct(System const *const sys)
 {
