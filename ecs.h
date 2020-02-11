@@ -73,9 +73,9 @@ typedef uint16_t uintEC; //any number that stores values that goes from 0 to the
 typedef uint8_t  uintST; //any number that goes from 0 to the maximum number of systems/tasks
 typedef uint8_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
+typedef uint16_t EventSignature; //hashesh name of EventType
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
-
 
 typedef enum
 {
@@ -127,6 +127,13 @@ typedef struct
 }Task;
 
 
+typedef struct
+{
+	void* data; //pointer to struct which contains the actual informations
+	EventSignature signature;
+}Event;
+
+
 
 //TODO: 
 // - Giving hints to systems about the number of components and entitys that are going to be used
@@ -138,28 +145,21 @@ typedef struct
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
+//yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit
+extern SparseSet* sets; //in componentManager
 extern ComponentKey* keys; //in componentManager
-extern uintEC keysCapacity;  //in componentManager
 
 
 void      entityManager_init(void);
 void 	  entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey const key);
-void      entityManager_entity_key_set(ComponentKey const key);
 void      entityManager_entity_erase(EntityId const e);
 
 #define   entityManager_entity_generate(...)\
-	({\
-	ComponentKey key = 0;\
-	BOOST_PP_SEQ_FOR_EACH(evaluateComponentKey, &key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
-	_entityManager_entity_generate(key);\
-	})
+	({_entityManager_entity_generate(components_convertToKey(__VA_ARGS__));})
 
-#define   evaluateComponentKey(r, key, ComponentType) *(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
-	//before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
-	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
-
-#define   entityManager_foreach(entity) for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
+#define   entityManager_foreach(entity) \
+	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
 //this will only be called inside a callback. 
 //The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 //this means one doesnt have to give the data as an argument since their name is already know.
@@ -170,55 +170,67 @@ void 		 componentManager_terminate(void);
 void 		_componentManager_component_register(ComponentSignature const signature, size_t const componentSize, 
 												 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint);
 void		 componentManager_entity_register(EntityId const entity, ComponentKey const key);
-SparseSet*   componentManager_sparseSet_get(ComponentSignature const signature);
 void         componentManager_entity_erase(EntityId const entity);
-ComponentKey componentManager_key_get(EntityId const entity);
-//gets size and name of component and passes it to create func
+void 		_componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
+
 #define 	 componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint)\
 	_componentManager_component_register(ComponentType##Component, sizeof(ComponentType), maxComponentsHint, maxComponentsDevnHint);
 
 //@alias is the alias that is going to be used for the component, like for example pos, or vel
 #define 	 componentManager_component_use(ComponentType, alias)\
-	SparseSet* ComponentType##SparseSet = componentManager_sparseSet_get(ComponentType##Component); \
 	ComponentType* alias;
 	//create vairable that can be used by component_get
 	//get the sparse array which is going to be indexed for this ComponentType
+	//sets is global to avoid calling a simple get() function everytime which decreases performance
+
+#define componentManager_entity_components_add(entity, ...)\
+	_componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 
 #define 	 componentManager_component_get(ComponentType, alias, entity)\
-	alias = &((ComponentType*)ComponentType##SparseSet->components)[ComponentType##SparseSet->sparse[entity]];
+	alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
 	//updating the value of the alias for a member of a component
 
-#define 	 componentManager_componentMatches_foreach(entity, requiredKey)\
-	for(uintEC entity=0, key=keys[0]; entity < keysCapacity; key = keys[++entity])\
-		if(key_match(requiredKey, key))
+#define 	 componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, ...)\
+	for(uintEC i=0, entity=sets[smallestComponentTypeHint##Component].dense[i], key=keys[entity]; i < sets[smallestComponentTypeHint##Component].denseSize; ++i, key = keys[++entity])\
+		if(key_match(components_convertToKey(__VA_ARGS__), key))
 //entity is the alias that is going to be used for the next entity in the array that matches the key
-//iterates over all keys that exist. if one matches the required key, the code in the brackets after the if statement(the brackets 
-// and whats inside is written by the user) is executed. this basically iterates over all entitys and checks if their set of components
-//match with the required ones. For example: In the explode-system: a bomb explodes and every entity around it should get damage.
-//creating a system for this would be bad, because its callback is not called that often. So we just fetch all entitys everytime
-//we need this functionality. this results also in a much smaller memory use
+//iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
+//if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
+//by the user) is executed. For example: In the explode-system: a bomb explodes and every entity around it
+//should take damage. creating a system for this would be bad, because its callback is not called that often. So we just fetch all
+//entitys everytime we need this functionality. this results also in a much smaller memory use
+//smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
+//element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
+//required one. This makes iterating pretty fast.
+
+#define   key_evaluate(r, key, ComponentType)\
+	*(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
+	//@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
+	//given as parameter
+	//before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
+	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
+
+#define components_convertToKey(...)\
+	({\
+		ComponentKey key = 0;\
+		BOOST_PP_SEQ_FOR_EACH(key_evaluate, &key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
+		key;\
+	})
+
 
 void    systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);
 void    systemManager_terminate(void);
-void   _systemManager_system_register(SystemCallback callback, CallType const callType, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
-void   _systemManager_system_component_add(SystemCallback callback, ComponentSignature const signature);
+void   _systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void    systemManager_systems_call(CallType const callType);
 void    systemManager_entity_register(EntityId const entity, ComponentKey const key);
 void    systemManager_entity_erase(EntityId const entity);
 void    systemManager_task_register(TaskCallback const callback, CallType const callType);
 void    systemManager_tasks_call(CallType const callType);
+void    systemManager_entity_components_added(EntityId const entity, ComponentKey const key);
 
 #define systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
-	_systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint);\
-	BOOST_PP_SEQ_FOR_EACH(systemManager_system_component_add, callback, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-	//for each component that is passed call system_component_add with callback as its first argument and one 
-	//element of __VA_ARGS__ as the second
-#define systemManager_system_component_add(r, callback, ComponentType)\
-	_systemManager_system_component_add(callback, BOOST_PP_CAT(ComponentType, Component));
-	//concatenate type name of the struct/component with `Component` which then gets replaced with 
-	//the signature that was previously defined by the user
-	//BOOST_PP_CAT is used instead of ## because ComponentType is an element of a BOOST_PP_SEQUENCE
+	_systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
 void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature, 
@@ -228,9 +240,19 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
 
 
-void system_construct(System *const sys, SystemCallback callback, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
+void system_construct(System *const sys, SystemCallback callback, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void system_destruct(System const *const sys);
 void system_entity_add(System *const sys, EntityId const entity);
 void system_entity_remove(System *const sys, EntityId const entity);
+
+void _event_send(EventSignature const signature, void const *const data);
+
+#define event_send(EventType, data)\
+	void* _data = malloc(sizeof(EventType));\
+	*_data = (EventType)data;\
+	_event_send(hash(EventType), _data);
+
+
+
 
 #endif
