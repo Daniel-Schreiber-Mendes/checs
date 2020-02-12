@@ -3,8 +3,8 @@
 LFLAGS = -shared -o
 CFLAGS = -c -g -fpic -std=c99
 
-make: 	       				  entityManager.o componentManager.o systemManager.o sparseSet.o system.o
-	gcc $(LFLAGS) libchecs.so entityManager.o componentManager.o systemManager.o sparseSet.o system.o -lchecl
+make: 	       				  entityManager.o componentManager.o systemManager.o sparseSet.o system.o commandManager.o
+	gcc $(LFLAGS) libchecs.so entityManager.o componentManager.o systemManager.o sparseSet.o system.o commandManager.o -lchecl
 	mv libchecs.so /usr/local/lib/
 	cp *.h /usr/local/include/checs/
 
@@ -22,3 +22,6 @@ sparseSet.o: sparseSet.c
 
 system.o: system.c
 	gcc $(CFLAGS) system.c
+
+commandManager.o: commandManager.c
+	gcc $(CFLAGS) commandManager.c

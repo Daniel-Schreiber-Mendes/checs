@@ -73,9 +73,12 @@ typedef uint16_t uintEC; //any number that stores values that goes from 0 to the
 typedef uint8_t  uintST; //any number that goes from 0 to the maximum number of systems/tasks
 typedef uint8_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
-typedef uint16_t EventSignature; //hashesh name of EventType
+typedef uint8_t EventSignature; 
+typedef uint8_t CommandSignature;
+typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
+typedef void(*CommandCallback)(void*);
 
 typedef enum
 {
@@ -126,20 +129,9 @@ typedef struct
 	TaskCallback callback;
 }Task;
 
-
-typedef struct
-{
-	void* data; //pointer to struct which contains the actual informations
-	EventSignature signature;
-}Event;
-
-
-
 //TODO: 
-// - Giving hints to systems about the number of components and entitys that are going to be used
 // - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
-//   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocationsd
-// 
+//   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
 
 #define getBitCount(type) sizeof(type) * 8
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
@@ -183,7 +175,7 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 	//get the sparse array which is going to be indexed for this ComponentType
 	//sets is global to avoid calling a simple get() function everytime which decreases performance
 
-#define componentManager_entity_components_add(entity, ...)\
+#define 	 componentManager_entity_components_add(entity, ...)\
 	_componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 
 #define 	 componentManager_component_get(ComponentType, alias, entity)\
@@ -203,14 +195,14 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 //element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
 //required one. This makes iterating pretty fast.
 
-#define   key_evaluate(r, key, ComponentType)\
+#define 	 key_evaluate(r, key, ComponentType)\
 	*(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
 	//@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
 	//given as parameter
 	//before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
 	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
 
-#define components_convertToKey(...)\
+#define 	 components_convertToKey(...)\
 	({\
 		ComponentKey key = 0;\
 		BOOST_PP_SEQ_FOR_EACH(key_evaluate, &key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
@@ -245,14 +237,18 @@ void system_destruct(System const *const sys);
 void system_entity_add(System *const sys, EntityId const entity);
 void system_entity_remove(System *const sys, EntityId const entity);
 
-void _event_send(EventSignature const signature, void const *const data);
 
-#define event_send(EventType, data)\
-	void* _data = malloc(sizeof(EventType));\
-	*_data = (EventType)data;\
-	_event_send(hash(EventType), _data);
+void    commandManager_init(uintC const n_signatureCount);
+void 	commandManager_terminate(void);
+void   _commandManager_command_publish(CommandSignature const signature, void* data);
+void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
 
-
+#define commandManager_command_publish(CommandDataType, signature, data)\
+	{\
+		CommandDataType* _data = malloc(sizeof(CommandDataType));\
+		*_data = (CommandDataType)data;\
+		_commandManager_command_publish(signature, _data);\
+	}
 
 
 #endif

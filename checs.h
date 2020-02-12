@@ -6,16 +6,11 @@
 
 //no functionality is allowed here. Only redefinitions and grouping of functions
 
-
-#define checs_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount, componentCount, maxEntitysHint, maxEntitysDevnHint)\
-	systemManager_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount);\
-	entityManager_init();\
-	componentManager_init(componentCount, maxEntitysHint, maxEntitysDevnHint);
-
 #define checs_terminate()\
 	entityManager_terminate();\
 	systemManager_terminate();\
-	componentManager_terminate();
+	componentManager_terminate();\
+	commandManager_terminate();
 
 #define checs_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint) componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint);
 #define checs_entity_generate(...) entityManager_entity_generate(__VA_ARGS__)
@@ -27,5 +22,7 @@
 #define checs_system_parameters EntityId *const entitys, uintEC const entityCount
 #define checs_entity_erase(entity) entityManager_entity_erase(entity)
 
+#define checs_command_subscribe(signature, callback) commandManager_command_subscribe(signature, callback)
+#define checs_command_publish(CommandDataType, signature, data) commandManager_command_publish(CommandDataType, signature, data)
 
 #endif
