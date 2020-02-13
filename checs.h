@@ -10,7 +10,8 @@
 	entityManager_terminate();\
 	systemManager_terminate();\
 	componentManager_terminate();\
-	commandManager_terminate();
+	commandManager_terminate();\
+	eventManager_terminate();
 
 #define checs_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint) componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint);
 #define checs_entity_generate(...) entityManager_entity_generate(__VA_ARGS__)

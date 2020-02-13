@@ -1,10 +1,10 @@
 #include "ecs.h"
 
 //I know 2D arrays are slow but it is not possible to put everything inside a 1D array because the size changes at runtime
-static CommandCallback** callbacks; //array of arrays of callbacks that are called when a command occurs
-static uint8_t* callbackCounts; //array of numbers of registered callbacks for every commandtype
+static CommandCallback **callbacks; //array of arrays of callbacks that are called when a command occurs
+static uint8_t *callbackCounts; //array of numbers of registered callbacks for every commandtype
 
-static CommandSignature* signatures;
+static CommandSignature *signatures;
 static uintC signatureCount; //number of different types of commands
 
 
@@ -20,7 +20,7 @@ void commandManager_init(uintC const n_signatureCount)
 
 void commandManager_terminate(void)
 {
-	for(uintC i=0; i < signatureCount; ++i)
+	for (uintC i=0; i < signatureCount; ++i)
 		free_debug(callbacks[i]);
 	free_debug(callbacks);
 
@@ -31,7 +31,7 @@ void commandManager_terminate(void)
 
 void _commandManager_command_publish(CommandSignature const signature, void* data)
 {
-	for(uint8_t i=0; i < callbackCounts[signature]; ++i)
+	for (uint8_t i=0; i < callbackCounts[signature]; ++i)
 		callbacks[signature][callbackCounts[i]](data);
 	free(data);
 }

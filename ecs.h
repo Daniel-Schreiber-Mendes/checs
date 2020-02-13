@@ -76,6 +76,7 @@ typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum numb
 typedef uint8_t EventSignature; 
 typedef uint8_t CommandSignature;
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
+typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of events
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
@@ -140,7 +141,8 @@ typedef struct
 //yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit
 extern SparseSet* sets; //in componentManager
 extern ComponentKey* keys; //in componentManager
-
+extern void ***events; //array of arrys of void pointers
+extern uint8_t *eventCounts; //number of current events in each eventqueue
 
 void      entityManager_init(void);
 void 	  entityManager_terminate(void);
@@ -250,5 +252,12 @@ void    commandManager_command_subscribe(CommandSignature const signature, Comma
 		_commandManager_command_publish(signature, _data);\
 	}
 
+void eventManager_init(uintE const n_signatureCount);
+void eventManager_terminate(void);
+void eventManager_event_publish(EventSignature const signature, void* data);
+void eventManager_events_poll();
+
+#define eventManager_events_poll(EventDataType, signature, alias)\
+	for (EventDataType* alias = events[signature][eventCounts[signature] - 1]; eventCounts[signature]; alias = events[signature][--eventCounts[signature]])
 
 #endif
