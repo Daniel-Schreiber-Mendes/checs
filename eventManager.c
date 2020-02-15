@@ -1,30 +1,74 @@
 #include "ecs.h"
 
+//this eventManager consists of two event buffers. each buffer has its own eventqueues and eventCounts. when for example buffer 0 is 
+//active, all events that are polled are polled out of buffer 0 and all events that are send are send into buffer 1. this solves
+//the problem that if we had a single buffered queue, we dont't know when to remove the events from the queue because we can
+//not say for sure that ever system had the chance to poll them. this is because if we clear the buffer each frame and one event 
+//is send by the last buffer for example no one receives the event because the queue directly after gets cleared. and letting the
+//systems remove the events is also a bad idea because how does one system know, if every system that needed the events had already
+//polled them? and this is also extremely bad for concurrency. a double buffer solves this. the capacitys array is the same for both
+//buffers because they should always have the same size, only the content should differ.
 
-void ***events; //array of arrys of void pointers
-uint8_t *eventCounts; //number of current events in each eventqueue
+
+
+//double buffered event queue
+//db stands for double buffer
+void ***events_db[2];
+uint8_t *eventCounts_db[2]; //number of current events in each event queue
+uint8_t db_index = 0; 
+
+static uint8_t *eventCapacitys; //number of maximum events in each eventqueue
 static uintE signatureCount;
 
 void eventManager_init(uintE const n_signatureCount)
 {
-	events = calloc_debug(signatureCount = n_signatureCount, sizeof(void**));
-	eventCounts = calloc_debug(signatureCount, sizeof(uint8_t));
-
-	for (uintE i=0; i < signatureCount; ++i)
-		events[i] = malloc(sizeof(void*) * 10);
+	for (uint8_t i=0; i < 2; ++i)
+	{
+		events_db[i] = malloc_debug(sizeof(void**) * (signatureCount = n_signatureCount));
+		eventCounts_db[i] = calloc_debug(signatureCount, sizeof(uint8_t));
+	}
+	eventCapacitys = malloc_debug(sizeof(uint8_t) * signatureCount);
 }
 
 
 void eventManager_terminate(void)
 {
-	for (uintE i=0; i < signatureCount; ++i)
-		free(events[i]);
-	free_debug(events);
-	free_debug(eventCounts);
+	for (uint8_t i=0; i < 2; ++i)
+	{
+		for (uintE j=0; j < signatureCount; ++j)
+		{
+			//free(events_db[i][j]);
+		}
+		free_debug(events_db[i]);
+		free_debug(eventCounts_db[i]);
+	}
+	free_debug(eventCapacitys);
 }
 
 
+void eventManager_event_register(EventSignature const signature, uint8_t const maxEventsHint)
+{
+	events_db[db_index][signature] = malloc(sizeof(void*) * maxEventsHint);
+	eventCapacitys[signature] = maxEventsHint;
+}
+
+//the published events are going to be put inside the buffer that is currently not active.
 void eventManager_event_publish(EventSignature const signature, void* data)
 {
-	events[signature][eventCounts[signature]++] = data;
+	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])
+	{
+		events_db[db_index][signature] = realloc(events_db[db_index][signature], eventCapacitys[signature] *= 2);
+	}
+	//because an event is extremely lightweight, the size doubles everytime the size exceeds the capacity instead of letting the user
+	//decide by which rate it will grow. addionally it is pretty hard for the suer to get to know how much it should be
+
+	events_db[db_index][signature][eventCounts_db[db_index][signature]++] = data;
+}
+
+
+void eventManager_buffers_swap(void)
+{
+	db_index = 1 - db_index;
+	memset(eventCounts_db[db_index], 0, sizeof(uint8_t) * signatureCount);
+	//swapping the buffers and then clearing the one that is now not going to be used
 }

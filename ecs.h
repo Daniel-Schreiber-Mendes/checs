@@ -70,22 +70,23 @@ typedef uint8_t ComponentKey; //8bits mean 8 components can be indicated
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
 typedef uint16_t ComponentId; //unique identifier for a instanciated component
 typedef uint16_t uintEC; //any number that stores values that goes from 0 to the maximum value EntityId can hold
-typedef uint8_t  uintST; //any number that goes from 0 to the maximum number of systems/tasks
+typedef uint8_t uintST; //any number that goes from 0 to the maximum number of systems/tasks
 typedef uint8_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
 typedef uint8_t EventSignature; 
 typedef uint8_t CommandSignature;
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
-typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of events
+typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
 
 typedef enum
 {
-	UPDATE,
-	DRAW	
-}CallType; //specifies when the system/task is called
+	ON_UPDATE,
+	ON_DRAW	
+}
+CallType; //specifies when the system/task is called
 
 
 typedef struct
@@ -102,7 +103,8 @@ typedef struct
 	void* components;
 	ComponentSignature signature; //signature of components that are stored
 	size_t componentSize; //size of component
-}SparseSet;
+}
+SparseSet;
 
 
 typedef struct
@@ -119,30 +121,34 @@ typedef struct
 	bool active;
 	SystemCallback callback;	
 	ComponentKey key; //key shows which components at least an entity has to have to be processed by this system
-}System;
-//it is perfectly legal to create or erase an entity inside a system call. but there is no guarantee that the entity will be 
-//accessable during this call. because of this the components of an entity that just got created should not be modified during it
+}
+System;
+/*it is perfectly legal to create or erase an entity inside a system call. but there is no guarantee that the entity will be 
+accessable during this call. because of this the components of an entity that just got created should not be modified during it*/
 
 
 typedef struct 
 {
 	bool active;
 	TaskCallback callback;
-}Task;
+}
+Task;
 
-//TODO: 
-// - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
-//   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
+
+/*TODO: 
+ - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
+   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations*/
 
 #define getBitCount(type) sizeof(type) * 8
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
-//yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit
-extern SparseSet* sets; //in componentManager
-extern ComponentKey* keys; //in componentManager
-extern void ***events; //array of arrys of void pointers
-extern uint8_t *eventCounts; //number of current events in each eventqueue
+/*yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit*/
+extern SparseSet* sets; /*in componentManager*/
+extern ComponentKey* keys; /*in componentManager*/
+extern void ***events_db[2];
+extern uint8_t *eventCounts_db[2];
+extern uint8_t db_index; 
 
 void      entityManager_init(void);
 void 	  entityManager_terminate(void);
@@ -154,10 +160,10 @@ void      entityManager_entity_erase(EntityId const e);
 
 #define   entityManager_foreach(entity) \
 	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
-//this will only be called inside a callback. 
-//The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
-//this means one doesnt have to give the data as an argument since their name is already know.
-//entity is only the alias that is going to be used for the entityId's inside the array
+/*this will only be called inside a callback. 
+The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
+this means one doesnt have to give the data as an argument since their name is already know.
+entity is only the alias that is going to be used for the entityId's inside the array*/
 
 void 		 componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint);
 void 		 componentManager_terminate(void);
@@ -170,39 +176,39 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 #define 	 componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint)\
 	_componentManager_component_register(ComponentType##Component, sizeof(ComponentType), maxComponentsHint, maxComponentsDevnHint);
 
-//@alias is the alias that is going to be used for the component, like for example pos, or vel
+/*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define 	 componentManager_component_use(ComponentType, alias)\
 	ComponentType* alias;
-	//create vairable that can be used by component_get
-	//get the sparse array which is going to be indexed for this ComponentType
-	//sets is global to avoid calling a simple get() function everytime which decreases performance
+	/*create vairable that can be used by component_get
+	get the sparse array which is going to be indexed for this ComponentType
+	sets is global to avoid calling a simple get() function everytime which decreases performance*/
 
 #define 	 componentManager_entity_components_add(entity, ...)\
 	_componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 
 #define 	 componentManager_component_get(ComponentType, alias, entity)\
 	alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
-	//updating the value of the alias for a member of a component
+	/*updating the value of the alias for a member of a component*/
 
 #define 	 componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, ...)\
 	for(uintEC i=0, entity=sets[smallestComponentTypeHint##Component].dense[i], key=keys[entity]; i < sets[smallestComponentTypeHint##Component].denseSize; ++i, key = keys[++entity])\
 		if(key_match(components_convertToKey(__VA_ARGS__), key))
-//entity is the alias that is going to be used for the next entity in the array that matches the key
-//iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
-//if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
-//by the user) is executed. For example: In the explode-system: a bomb explodes and every entity around it
-//should take damage. creating a system for this would be bad, because its callback is not called that often. So we just fetch all
-//entitys everytime we need this functionality. this results also in a much smaller memory use
-//smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
-//element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
-//required one. This makes iterating pretty fast.
+/*entity is the alias that is going to be used for the next entity in the array that matches the key
+iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
+if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
+by the user) is executed. For example: In the explode-system: a bomb explodes and every entity around it
+should take damage. creating a system for this would be bad, because its callback is not called that often. So we just fetch all
+entitys everytime we need this functionality. this results also in a much smaller memory use
+smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
+element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
+required one. This makes iterating pretty fast.*/
 
 #define 	 key_evaluate(r, key, ComponentType)\
 	*(key) |= 1 << BOOST_PP_CAT(ComponentType, Component);
-	//@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
-	//given as parameter
-	//before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
-	//because this has to be done when it is a element of a BOOST_PP_SEQUENCE
+	/*@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
+	given as parameter
+	before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
+	because this has to be done when it is a element of a BOOST_PP_SEQUENCE*/
 
 #define 	 components_convertToKey(...)\
 	({\
@@ -242,22 +248,16 @@ void system_entity_remove(System *const sys, EntityId const entity);
 
 void    commandManager_init(uintC const n_signatureCount);
 void 	commandManager_terminate(void);
-void   _commandManager_command_publish(CommandSignature const signature, void* data);
+void    commandManager_command_publish(CommandSignature const signature, void* data);
 void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
 
-#define commandManager_command_publish(CommandDataType, signature, data)\
-	{\
-		CommandDataType* _data = malloc(sizeof(CommandDataType));\
-		*_data = (CommandDataType)data;\
-		_commandManager_command_publish(signature, _data);\
-	}
-
-void eventManager_init(uintE const n_signatureCount);
-void eventManager_terminate(void);
-void eventManager_event_publish(EventSignature const signature, void* data);
-void eventManager_events_poll();
+void 	eventManager_init(uintE const n_signatureCount);
+void 	eventManager_terminate(void);
+void 	eventManager_event_register(EventSignature const signature, uint8_t const maxEventsHint);
+void 	eventManager_event_publish(EventSignature const signature, void* data);
+void    eventManager_buffers_swap(void);
 
 #define eventManager_events_poll(EventDataType, signature, alias)\
-	for (EventDataType* alias = events[signature][eventCounts[signature] - 1]; eventCounts[signature]; alias = events[signature][--eventCounts[signature]])
+	for (EventDataType* alias = events_db[1 - db_index][signature][eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = events_db[1 - db_index][signature][--eventCounts_db[1 - db_index][signature]])
 
 #endif

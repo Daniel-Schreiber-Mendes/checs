@@ -21,7 +21,9 @@ void commandManager_init(uintC const n_signatureCount)
 void commandManager_terminate(void)
 {
 	for (uintC i=0; i < signatureCount; ++i)
-		free_debug(callbacks[i]);
+	{
+		free(callbacks[i]);
+	}
 	free_debug(callbacks);
 
 	free_debug(signatures);
@@ -29,11 +31,12 @@ void commandManager_terminate(void)
 }
 
 
-void _commandManager_command_publish(CommandSignature const signature, void* data)
+void commandManager_command_publish(CommandSignature const signature, void* data)
 {
 	for (uint8_t i=0; i < callbackCounts[signature]; ++i)
+	{
 		callbacks[signature][callbackCounts[i]](data);
-	free(data);
+	}
 }
 
 
