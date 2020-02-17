@@ -65,7 +65,7 @@ void _systemManager_system_register(SystemCallback callback, CallType const call
 void systemManager_systems_call(CallType const callType)
 {
 	uintST i, iMax;
-	if(callType == UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
+	if(callType == ON_UPDATE) { i = 0; iMax = systemUpdateCount; } else { i = systemUpdateCount; iMax = systemCount; }
 	for(; i < iMax; ++i)
 		if(systems[i].active)
 			systems[i].callback(systems[i].dense, systems[i].denseSize);
@@ -102,7 +102,7 @@ void systemManager_tasks_call(CallType const callType)
 {
 	//the index starting point in the array depends on which type of task is called now
 	uintST i, iMax;
-	if(callType == UPDATE) { i = 0; iMax = taskUpdateCount; } else { i = taskUpdateCount; iMax = taskCount; }
+	if(callType == ON_UPDATE) { i = 0; iMax = taskUpdateCount; } else { i = taskUpdateCount; iMax = taskCount; }
 	for(; i < iMax; ++i)
 		if (tasks[i].active)
 			tasks[i].callback();

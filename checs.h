@@ -26,7 +26,9 @@
 #define checs_entity_generate(...) entityManager_entity_generate(__VA_ARGS__)
 
 #define checs_command_subscribe(signature, callback) commandManager_command_subscribe(signature, callback)
-#define checs_command_publish(signature, data) commandManager_command_publish(signature, data)
+#define checs_command_publish(signature, data) commandManager_command_publish(signature, (data))
+#define checs_command_parameters void *const data
+/* this need to be inside the function head */
 
 #define checs_event_register(signature, maxEventsHint) eventManager_event_register(signature, maxEventsHint)
 #define checs_event_publish(signature, data) eventManager_event_publish(signature, data)

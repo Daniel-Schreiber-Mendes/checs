@@ -49,6 +49,7 @@ void eventManager_terminate(void)
 void eventManager_event_register(EventSignature const signature, uint8_t const maxEventsHint)
 {
 	events_db[db_index][signature] = malloc(sizeof(void*) * maxEventsHint);
+	events_db[1 - db_index][signature] = malloc(sizeof(void*) * maxEventsHint);
 	eventCapacitys[signature] = maxEventsHint;
 }
 

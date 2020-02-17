@@ -137,7 +137,8 @@ Task;
 
 /*TODO: 
  - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
-   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations*/
+   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
+ -creating a seperate memory pool for the values that are passed to the commands*/
 
 #define getBitCount(type) sizeof(type) * 8
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
@@ -249,6 +250,7 @@ void system_entity_remove(System *const sys, EntityId const entity);
 void    commandManager_init(uintC const n_signatureCount);
 void 	commandManager_terminate(void);
 void    commandManager_command_publish(CommandSignature const signature, void* data);
+/* because only void* are passed this is much faster than passing each element*/
 void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
 
 void 	eventManager_init(uintE const n_signatureCount);
