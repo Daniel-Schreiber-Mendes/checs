@@ -2,6 +2,7 @@
 
 
 Examples:
+
 ```C
 #include<checs/checs.h>
 
@@ -59,4 +60,3 @@ int main(void)
     }
 }
 ```
-
