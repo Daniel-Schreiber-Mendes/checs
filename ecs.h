@@ -8,7 +8,7 @@
 
 
 //if DEBUG is defined, print memory allocations
-#define DEBUG
+//#define DEBUG
 
 //changes font color to blue, print message, reset font color
 #define malloc_debug(size)\
