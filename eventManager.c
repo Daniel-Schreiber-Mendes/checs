@@ -10,14 +10,13 @@
 //buffers because they should always have the same size, only the content should differ.
 
 
-
 //double buffered event queue
 //db stands for double buffer
-void ***events_db[2];
+void **events_db[2];
 uint8_t *eventCounts_db[2]; //number of current events in each event queue
 uint8_t db_index = 0; 
+uint8_t *eventCapacitys; //number of maximum events in each eventqueue
 
-static uint8_t *eventCapacitys; //number of maximum events in each eventqueue
 static uintE signatureCount;
 
 void eventManager_init(uintE const n_signatureCount)
@@ -43,27 +42,6 @@ void eventManager_terminate(void)
 		free_debug(eventCounts_db[i]);
 	}
 	free_debug(eventCapacitys);
-}
-
-
-void eventManager_event_register(EventSignature const signature, uint8_t const maxEventsHint)
-{
-	events_db[db_index][signature] = malloc(sizeof(void*) * maxEventsHint);
-	events_db[1 - db_index][signature] = malloc(sizeof(void*) * maxEventsHint);
-	eventCapacitys[signature] = maxEventsHint;
-}
-
-//the published events are going to be put inside the buffer that is currently not active.
-void eventManager_event_publish(EventSignature const signature, void* data)
-{
-	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])
-	{
-		events_db[db_index][signature] = realloc(events_db[db_index][signature], eventCapacitys[signature] *= 2);
-	}
-	//because an event is extremely lightweight, the size doubles everytime the size exceeds the capacity instead of letting the user
-	//decide by which rate it will grow. addionally it is pretty hard for the suer to get to know how much it should be
-
-	events_db[db_index][signature][eventCounts_db[db_index][signature]++] = data;
 }
 
 

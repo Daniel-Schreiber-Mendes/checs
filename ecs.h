@@ -85,7 +85,7 @@ typedef struct
 	uintEC* sparse; //sparse packed array of indices to dense array
 	uintEC sparseCapacity; //maximum number of elements
 
-	uintEC* dense; //dense array of components
+	uintEC* dense; //dense array of entityId's
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
@@ -138,9 +138,11 @@ Task;
 /*yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit*/
 extern SparseSet* sets; /*in componentManager*/
 extern ComponentKey* keys; /*in componentManager*/
-extern void ***events_db[2];
+extern void **events_db[2];
 extern uint8_t *eventCounts_db[2];
 extern uint8_t db_index; 
+extern uint8_t *eventCapacitys;
+
 
 void      entityManager_init(void);
 void 	  entityManager_terminate(void);
@@ -184,9 +186,9 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 	alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
-#define      componentManager_components_foreach(ComponentType, alias)\
-	SparseSet
-	for (uintEC i=0; i < sets[ComponentType##Component].denseSize; ++i)
+#define      componentManager_components_foreach(ComponentType, alias, entityAlias)\
+	ComponentType *componentAlias;\
+	for (uintEC i=0, entityAlias=0; i < sets[ComponentType##Component].denseSize; entityAlias = sets[ComponentType##Component].dense[i], componentAlias = &((ComponentType*)sets[ComponentType##Component].components)[++i])
 
 #define 	 componentManager_component_get_once(ComponentType, alias, entity)\
 	ComponentType *alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
@@ -252,16 +254,36 @@ logic together */
 void    commandManager_init(uintC const n_signatureCount);
 void 	commandManager_terminate(void);
 void    commandManager_command_publish(CommandSignature const signature, void* data);
-/* because only void* are passed this is much faster than passing each element*/
+/* because only void* are passed this is much faster than passing each element by value*/
 void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
 
 void 	eventManager_init(uintE const n_signatureCount);
 void 	eventManager_terminate(void);
-void 	eventManager_event_register(EventSignature const signature, uint8_t const maxEventsHint);
-void 	eventManager_event_publish(EventSignature const signature, void* data);
 void    eventManager_buffers_swap(void);
 
 #define eventManager_events_poll(EventDataType, signature, alias)\
-	for (EventDataType* alias = events_db[1 - db_index][signature][eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = events_db[1 - db_index][signature][--eventCounts_db[1 - db_index][signature]])
+	for (EventDataType* alias = &((EventDataType*)events_db[1 - db_index][signature])[eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = &((EventDataType*)events_db[1 - db_index][signature])[--eventCounts_db[1 - db_index][signature]])
+
+
+#define eventManager_event_publish(EventDataType, signature, data)\
+	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])\
+	{\
+		printf("ja\n");\
+		events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
+		printf("halloẞ?\n");\
+	}\
+	else{\
+	/*memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));*/eventCounts_db[db_index][signature]++;}
+	//because an event is pretty lightweight, the size doubles everytime the size exceeds the capacity instead of letting the user
+	//decide by which rate it will grow. addionally it is pretty hard for the user to get to know how much it should be
+
+//events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
+
+
+#define eventManager_event_register(EventDataType, signature, maxEventsHint)\
+	events_db[db_index][signature] = malloc(sizeof(EventDataType) * maxEventsHint);\
+	events_db[1 - db_index][signature] = malloc(sizeof(EventDataType) * maxEventsHint);\
+	eventCapacitys[signature] = maxEventsHint;
+
 
 #endif
