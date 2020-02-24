@@ -1,11 +1,11 @@
 #include "ecs.h"
 
-SparseSet* sets;
+SparseSet *sets;
 static uintCS componentCount;
 
 static uintEC maxEntitysDevnHint;
 
-ComponentKey* keys; //array of componentKeys
+ComponentKey *keys; //array of componentKeys
 static uintEC keysCapacity; //highest id that can be currently stored
 
 void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint)

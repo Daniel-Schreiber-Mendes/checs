@@ -8,35 +8,35 @@
 
 
 //if DEBUG is defined, print memory allocations
-//#define DEBUG
+#define DEBUG
 
 //changes font color to blue, print message, reset font color
 #define malloc_debug(size)\
 ({\
+	void* retVal = malloc((size));\
 	printf("\033[0;34m");\
 	printf("bytes: %.4u | allocated   | line: %.3i | file: %s\n", (uint16_t)size, __LINE__, __FILE__ );\
 	printf("\033[0m");\
-	void* retVal = malloc((size));\
 	retVal;\
 })
 
 
 #define calloc_debug(num, size)\
 ({\
+	void* retVal = calloc((num), (size));\
 	printf("\033[0;34m");\
 	printf("bytes: %.4u | allocated   | line: %.3i | file: %s\n", (uint16_t)size, __LINE__, __FILE__ );\
 	printf("\033[0m");\
-	void* retVal = calloc((num), (size));\
 	retVal;\
 })
 
 //changes font color to green, print message, reset font color
 #define free_debug(p)\
 ({\
+	free((p));\
 	printf("\033[0;32m");\
 	printf("	      deallocated | line: %.3i | file: %s\n", __LINE__, __FILE__);\
 	printf("\033[0m");\
-	free((p));\
 })
 
 
@@ -48,15 +48,6 @@
 	#define malloc_debug(size) malloc(size)
 	#define calloc_debug(num, size) calloc(num, size)
 #endif
-
-
-
-#ifdef size_t
-	#undef size_t
-#endif				//redefine size_t because it is by standard 64 bits in size which is way too big for any data to ever be
-#define size_t uint16_t
-
-
 
 
 //the signatures come in as numbers like 1, 2, 3 and so forth. to create a componentKey, which could look like e.g. this 0101 0110
@@ -136,7 +127,7 @@ Task;
 
 
 /*TODO: 
- - Telling the ecs to print out the number of entitys each system and sparseSet has at its maximum 
+ - Telling the ecs to create file with number of entitys each system and sparseSet has at its maximum 
    and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
  -creating a seperate memory pool for the values that are passed to the commands*/
 
@@ -155,12 +146,14 @@ void      entityManager_init(void);
 void 	  entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey const key);
 void      entityManager_entity_erase(EntityId const e);
+void      entitymanager_entity_tag_add(EntityId const entity, uintEC const tag);
+EntityId  entityManager_entity_get_by_tag(uintEC const tag);
 
 #define   entityManager_entity_generate(...)\
 	({_entityManager_entity_generate(components_convertToKey(__VA_ARGS__));})
 
 #define   entityManager_foreach(entity) \
-	for(uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
+	for (uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
 /*this will only be called inside a callback. 
 The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 this means one doesnt have to give the data as an argument since their name is already know.
@@ -179,7 +172,7 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define 	 componentManager_component_use(ComponentType, alias)\
-	ComponentType* alias;
+	ComponentType *alias
 	/*create vairable that can be used by component_get
 	get the sparse array which is going to be indexed for this ComponentType
 	sets is global to avoid calling a simple get() function everytime which decreases performance*/
@@ -191,9 +184,16 @@ void 		_componentManager_entity_components_add(EntityId const entity, ComponentK
 	alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
+#define      componentManager_components_foreach(ComponentType, alias)\
+	SparseSet
+	for (uintEC i=0; i < sets[ComponentType##Component].denseSize; ++i)
+
+#define 	 componentManager_component_get_once(ComponentType, alias, entity)\
+	ComponentType *alias = &((ComponentType*)sets[ComponentType##Component].components)[sets[ComponentType##Component].sparse[entity]];
+
 #define 	 componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, ...)\
-	for(uintEC i=0, entity=sets[smallestComponentTypeHint##Component].dense[i], key=keys[entity]; i < sets[smallestComponentTypeHint##Component].denseSize; ++i, key = keys[++entity])\
-		if(key_match(components_convertToKey(__VA_ARGS__), key))
+	for (uintEC i=0, entity=sets[smallestComponentTypeHint##Component].dense[i], key=keys[entity]; i < sets[smallestComponentTypeHint##Component].denseSize; ++i, key = keys[++entity])\
+		if (key_match(components_convertToKey(__VA_ARGS__), key))
 /*entity is the alias that is going to be used for the next entity in the array that matches the key
 iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
 if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
@@ -247,6 +247,8 @@ void system_entity_add(System *const sys, EntityId const entity);
 void system_entity_remove(System *const sys, EntityId const entity);
 
 
+/*altough callbacks are faster than events one should use them sparsly because they contradict the idea of grouping
+logic together */
 void    commandManager_init(uintC const n_signatureCount);
 void 	commandManager_terminate(void);
 void    commandManager_command_publish(CommandSignature const signature, void* data);
