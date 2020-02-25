@@ -268,12 +268,9 @@ void    eventManager_buffers_swap(void);
 #define eventManager_event_publish(EventDataType, signature, data)\
 	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])\
 	{\
-		printf("ja\n");\
 		events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
-		printf("halloẞ?\n");\
 	}\
-	else{\
-	/*memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));*/eventCounts_db[db_index][signature]++;}
+	memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));
 	//because an event is pretty lightweight, the size doubles everytime the size exceeds the capacity instead of letting the user
 	//decide by which rate it will grow. addionally it is pretty hard for the user to get to know how much it should be
 
