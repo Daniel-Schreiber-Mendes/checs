@@ -17,8 +17,7 @@
 #define checs_component_use(ComponentType, alias) componentManager_component_use(ComponentType, alias)
 #define checs_component_get(ComponentType, alias, entity) componentManager_component_get(ComponentType, alias, entity)
 #define checs_component_get_once(ComponentType, alias, entity) componentManager_component_get_once(ComponentType, alias, entity)
-
-
+#define checs_components_foreach(ComponentType, alias, entityAlias) componentManager_components_foreach(ComponentType, alias, entityAlias)
 #define checs_componentMatches_foreach(entity, smallestComponentTypeHint, ...) componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, __VA_ARGS__)
 
 
