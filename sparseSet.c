@@ -7,10 +7,10 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSi
 	*set = (SparseSet)
 	{
 		.sparse = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
-		.sparseCapacity = 8, 
+		.sparseCapacity = maxComponentsHint, 
 
 		.dense = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
-		.denseCapacity = 8, 
+		.denseCapacity = maxComponentsHint, 
 		.denseSize = 0,
 
 		.maxComponentsDevnHint = maxComponentsDevnHint,
