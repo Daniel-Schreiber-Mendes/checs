@@ -1,4 +1,5 @@
 #include "ecs.h"
+#include <string.h>
 
 //this eventManager consists of two event buffers. each buffer has its own eventqueues and eventCounts. when for example buffer 0 is 
 //active, all events that are polled are polled out of buffer 0 and all events that are send are send into buffer 1. this solves
@@ -23,10 +24,10 @@ void eventManager_init(uintE const n_signatureCount)
 {
 	for (uint8_t i=0; i < 2; ++i)
 	{
-		events_db[i] = malloc_debug(sizeof(void**) * (signatureCount = n_signatureCount));
-		eventCounts_db[i] = calloc_debug(signatureCount, sizeof(uint8_t));
+		events_db[i] = checs_malloc(sizeof(void**) * (signatureCount = n_signatureCount));
+		eventCounts_db[i] = checs_calloc(signatureCount, sizeof(uint8_t));
 	}
-	eventCapacitys = malloc_debug(sizeof(uint8_t) * signatureCount);
+	eventCapacitys = checs_malloc(sizeof(uint8_t) * signatureCount);
 }
 
 
@@ -36,12 +37,12 @@ void eventManager_terminate(void)
 	{
 		for (uintE j=0; j < signatureCount; ++j)
 		{
-			//free(events_db[i][j]);
+			//checs_free(events_db[i][j]);
 		}
-		free_debug(events_db[i]);
-		free_debug(eventCounts_db[i]);
+		checs_free(events_db[i]);
+		checs_free(eventCounts_db[i]);
 	}
-	free_debug(eventCapacitys);
+	checs_free(eventCapacitys);
 }
 
 

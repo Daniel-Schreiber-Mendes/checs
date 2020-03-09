@@ -13,14 +13,14 @@ void entityManager_init(void)
 {
 	stack_construct(&unusedEntitys, sizeof(EntityId));
 	stack_reserve(&unusedEntitys, 16);
-	tags = malloc_debug(0);
+	tags = checs_malloc(0);
 }
 
 
 void entityManager_terminate(void)
 {
 	stack_destruct(&unusedEntitys);
-	free_debug(tags);
+	checs_free(tags);
 }
 
 
@@ -35,7 +35,7 @@ EntityId _entityManager_entity_generate(ComponentKey const key)
 
 void entityManager_entity_erase(EntityId const entity)
 {
-	assert(keys[entity] != 0);
+	checs_assert(keys[entity] != 0);
 	stack_element_push(&unusedEntitys, EntityId, entity);
 	componentManager_entity_erase(entity);
 	systemManager_entity_erase(entity);

@@ -30,12 +30,12 @@ void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDra
 {
 	systemUpdateCount   = n_systemUpdateCount;
 	systemCount         = systemUpdateCount + systemDrawCount;
-	systems             = malloc_debug(sizeof(System) * systemCount);
+	systems             = checs_malloc(sizeof(System) * systemCount);
 	systemTypeCounts[1] = systemUpdateCount;
 
 	taskUpdateCount     = n_taskUpdateCount;
 	taskCount           = taskUpdateCount + taskDrawCount;
-	tasks               = malloc_debug(sizeof(Task) * taskCount);
+	tasks               = checs_malloc(sizeof(Task) * taskCount);
 	taskTypeCounts[1]   = taskUpdateCount;
 }
 
@@ -45,8 +45,8 @@ void systemManager_terminate(void)
 	for(uintST i=0; i < systemCount; ++i)
 		system_destruct(&systems[i]);
 
-	free_debug(systems);
-	free_debug(tasks);
+	checs_free(systems);
+	checs_free(tasks);
 }
 
 
@@ -104,16 +104,24 @@ void systemManager_tasks_call(CallType const callType)
 	uintST i, iMax;
 	if(callType == ON_UPDATE) { i = 0; iMax = taskUpdateCount; } else { i = taskUpdateCount; iMax = taskCount; }
 	for(; i < iMax; ++i)
+	{
 		if (tasks[i].active)
+		{
 			tasks[i].callback();
+		}
+	}
 }
 
 
 void systemManager_entity_components_added(EntityId const entity, ComponentKey const key)
 {
 	for(uintEC i=0; i < systemCount; ++i)
+	{
 		if(key_match(systems[i].key, keys[entity]))
+		{
 			system_entity_remove(&systems[i], entity);
+		}
+	}
 	//one could think, that adding an entity to a system without checking if it is already there might be bad, but this is not the 
 	//case because the key only signifies the NEW components. since all systems that the entity is added to 
 	//requires these components, the systems could not have registered the entity before

@@ -5,10 +5,10 @@ void system_construct(System *const sys, SystemCallback callback, ComponentKey c
 {
 	*sys = (System)
 	{
-		.sparse = malloc_debug(sizeof(uintEC) * maxEntitysHint), 
+		.sparse = checs_malloc(sizeof(uintEC) * maxEntitysHint), 
 		.sparseCapacity = maxEntitysHint,
 
-		.dense  = malloc_debug(sizeof(uintEC) * maxEntitysHint),
+		.dense  = checs_malloc(sizeof(uintEC) * maxEntitysHint),
 		.denseCapacity  = maxEntitysHint, 
 		.denseSize = 0,
 
@@ -29,8 +29,8 @@ void system_construct(System *const sys, SystemCallback callback, ComponentKey c
 
 void system_destruct(System const *const sys)
 {
-	free_debug(sys->dense);
-	free_debug(sys->sparse);
+	checs_free(sys->dense);
+	checs_free(sys->sparse);
 }
 
 

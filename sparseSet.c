@@ -1,22 +1,23 @@
 #include "ecs.h"
+#include <string.h>
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSignature const signature, 
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, 
 						 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint)
 {
 	*set = (SparseSet)
 	{
-		.sparse = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
+		.sparse = checs_malloc(sizeof(uintEC) * maxComponentsHint), 
 		.sparseCapacity = maxComponentsHint, 
 
-		.dense = malloc_debug(sizeof(uintEC) * maxComponentsHint), 
+		.dense = checs_malloc(sizeof(uintEC) * maxComponentsHint), 
 		.denseCapacity = maxComponentsHint, 
 		.denseSize = 0,
 
 		.maxComponentsDevnHint = maxComponentsDevnHint,
 
-		.components = malloc_debug(componentSize * maxComponentsHint), 
-		.signature = signature, 
+		.components = checs_malloc(componentSize * maxComponentsHint), 
+		.cki = cki, 
 		.componentSize = componentSize
 	};
 }
@@ -24,9 +25,9 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentSi
 
 void sparseSet_destruct(SparseSet const *const set)
 {
-	free_debug(set->dense);
-	free_debug(set->sparse);
-	free_debug(set->components);
+	checs_free(set->dense);
+	checs_free(set->sparse);
+	checs_free(set->components);
 }
 
 
