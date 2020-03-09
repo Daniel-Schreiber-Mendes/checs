@@ -7,16 +7,10 @@
 #include <stdlib.h>
 
 
-#define CHECS_DEBUG
-#ifdef CHECS_DEBUG
-	#define checs_assert(expr)\
-		if (!(expr))\
-		{\
-			printf("Checs-Assertion: %s failed. Line: %u, File: %s\n", #expr, __LINE__, __FILE__);\
-			exit(-1);\
-		}
+//#define CHECS_MEMLOG
+#define CHECS_ASSERT
 
-
+#ifdef CHECS_MEMCHECK
 	#define checs_malloc(size)\
 	({\
 		void* retVal = malloc((size));\
@@ -44,16 +38,22 @@
 		printf("Checs-Deallocation:               line: %.3i | file: %s\n", __LINE__, __FILE__);\
 		printf("\033[0m");\
 	})
-
-
-
 #else
 	#define checs_free(p) free(p)
 	#define checs_malloc(size) malloc(size)
 	#define checs_calloc(num, size) calloc(num, size)
-	#define checs_assert(expr) (void)0
 #endif
 
+#ifdef CHECS_ASSERT
+	#define checs_assert(expr)\
+		if (!(expr))\
+		{\
+			printf("Checs-Assertion: %s failed. Line: %u, File: %s\n", #expr, __LINE__, __FILE__);\
+			exit(-1);\
+		}
+#else
+	#define checs_assert(expr) (void)0
+#endif
 
 //the signatures come in as numbers like 1, 2, 3 and so forth. to create a componentKey, which could look like e.g. this 0101 0110
 //we have to or 0000 0000 with the bits that we want to set. 

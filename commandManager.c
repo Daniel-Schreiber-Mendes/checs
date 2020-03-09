@@ -10,11 +10,18 @@ static uintC signatureCount; //number of different types of commands
 
 void commandManager_init(uintC const n_signatureCount)
 {
-	callbacks = checs_calloc((signatureCount = n_signatureCount), sizeof(CommandCallback*));
+	callbacks = checs_malloc((signatureCount = n_signatureCount) * sizeof(CommandCallback*));
 	//why calloc? in command_subscribe when we realloc the array for the first time, the pointer does not point to a valid place in 
 	//memory yet. to indicate this, it has to be NULL
 	signatures = checs_malloc(sizeof(CommandSignature) * signatureCount);
 	callbackCounts = checs_calloc(signatureCount, sizeof(uint8_t)); //every count starts with 0
+
+	//allocating 0 bytes because the memory will be reallocated to the fitting size inside commandManager_command_publish(). but if we don't allocate 
+	//it before there will be more deallocations than alloctions which is confusing to debug
+	for (uintC i=0; i < signatureCount; ++i)
+	{
+		callbacks[i] = checs_malloc(0);
+	}
 }
 
 
@@ -25,7 +32,6 @@ void commandManager_terminate(void)
 		checs_free(callbacks[i]);
 	}
 	checs_free(callbacks);
-
 	checs_free(signatures);
 	checs_free(callbackCounts);
 }
