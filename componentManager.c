@@ -55,6 +55,7 @@ void componentManager_entity_register(EntityId const entity, ComponentKey const 
 	}
 	keys[entity] = 0;
 	_componentManager_entity_components_add(entity, key);
+	//printf("registered entity: %u, key: %u\n", entity, key);
 }
 
 
@@ -79,6 +80,7 @@ void _componentManager_entity_components_add(EntityId const entity, ComponentKey
 	{
 		if(key_match(1 << i, key))
 		{
+			//printf("Entity %u received component %u\n", entity, 1 << i);
 			sparseSet_entity_add(hashMap_element_get(&sets, SparseSet, setIndices[i]), entity);
 		}
 	}
