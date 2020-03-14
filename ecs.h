@@ -7,10 +7,11 @@
 #include <stdlib.h>
 
 
+#define CHECS_STATS
 //#define CHECS_MEMLOG
 #define CHECS_ASSERT
 
-#ifdef CHECS_MEMCHECK
+#ifdef CHECS_MEMLOG
 	#define checs_malloc(size)\
 	({\
 		void* retVal = malloc((size));\
@@ -55,6 +56,12 @@
 	#define checs_assert(expr) (void)0
 #endif
 
+#ifdef CHECS_STATS
+	#define checs_stats_log(expr) expr
+#else
+	#define checs_stats_log(expr) (void)0
+#endif
+
 //the signatures come in as numbers like 1, 2, 3 and so forth. to create a componentKey, which could look like e.g. this 0101 0110
 //we have to or 0000 0000 with the bits that we want to set. 
 //for example: Say a component has the signature 3. this means the third bit(counting from the right to left) has to be set.
@@ -95,8 +102,6 @@ typedef struct
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
-	uintEC maxComponentsDevnHint;
-
 	void* components;
 	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
@@ -135,7 +140,8 @@ Task;
 /*TODO: 
  - Telling the ecs to create file with number of entitys each system and sparseSet has at its maximum 
    and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
- -creating a seperate memory pool for the values that are passed to the commands*/
+ -creating a seperate memory pool for the values that are passed to the commands
+ */
 
 #define getBitCount(type) sizeof(type) * 8
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
@@ -167,9 +173,9 @@ The Signature of a callback is always void foo(EntityId *const entitys, uintEC c
 this means one doesnt have to give the data as an argument since their name is already know.
 entity is only the alias that is going to be used for the entityId's inside the array*/
 
-void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint);
+void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
-void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint);
+void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint);
 void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
 void    componentManager_entity_erase(EntityId const entity);
 void   _componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
@@ -177,8 +183,8 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_element_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
-#define componentManager_component_register(Type, maxComponentsHint, maxComponentsDevnHint)\
-	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, maxComponentsDevnHint);
+#define componentManager_component_register(Type, maxComponentsHint)\
+	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define componentManager_component_use(Type, alias) Type *alias
@@ -245,7 +251,7 @@ void    systemManager_entity_components_added(EntityId const entity, ComponentKe
 
 
 void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, 
-						 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint);
+						 uintEC const maxComponentsDevnHint);
 void sparseSet_destruct(SparseSet const *const set);
 void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);

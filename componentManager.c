@@ -6,16 +6,12 @@ uint8_t registeredComponentsCount = 0; //used to know what cki to assign to a re
 HashMap sets; //hashmap of sparseSets
 static uintCS componentCount;
 
-static uintEC maxEntitysDevnHint;
-
 ComponentKey *keys; //array of componentKeys
 static uintEC keysCapacity; //highest id that can be currently stored
 
 
-void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint, uintEC const n_maxEntitysDevnHint)
+void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint)
 {
-	//if componentCount is 0 it is undefined behaviour
-	maxEntitysDevnHint = n_maxEntitysDevnHint;
 	hashMap_construct(&sets, (componentCount = n_componentCount));
 	keys = checs_malloc(sizeof(ComponentKey) * (keysCapacity = maxEntitysHint));
 	setIndices = checs_calloc(sizeof(uint16_t), componentCount);
@@ -38,21 +34,18 @@ void componentManager_terminate(void)
 }
 
 
-void _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint)
+void _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint)
 {
 	SparseSet *const set = checs_malloc(sizeof(SparseSet));
 	hashMap_element_insert(&sets, sig, set);
-	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, maxComponentsDevnHint);
+	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint);
 	setIndices[registeredComponentsCount++] = sig;
 }
 
 
 void componentManager_entity_register(EntityId const entity, ComponentKey const key)
 {
-	if(entity >= keysCapacity)
-	{
-		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity += maxEntitysDevnHint));
-	}
+	checs_assert(entity < keysCapacity);
 	keys[entity] = 0;
 	_componentManager_entity_components_add(entity, key);
 	//printf("registered entity: %u, key: %u\n", entity, key);

@@ -19,6 +19,7 @@ void entityManager_init(void)
 
 void entityManager_terminate(void)
 {
+	checs_stats_log(printf("Maximum number of entitys: %u\n", nextEntityId + 1));
 	stack_destruct(&unusedEntitys);
 	checs_free(tags);
 }

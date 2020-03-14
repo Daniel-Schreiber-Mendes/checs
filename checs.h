@@ -13,7 +13,7 @@
 	commandManager_terminate();\
 	eventManager_terminate();
 
-#define checs_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint) componentManager_component_register(ComponentType, maxComponentsHint, maxComponentsDevnHint);
+#define checs_component_register(ComponentType, maxComponentsHint) componentManager_component_register(ComponentType, maxComponentsHint);
 #define checs_component_use(ComponentType, alias) componentManager_component_use(ComponentType, alias)
 #define checs_component_get(ComponentType, alias, entity) componentManager_component_get(ComponentType, alias, entity)
 #define checs_component_get_once(ComponentType, alias, entity) componentManager_component_get_once(ComponentType, alias, entity)

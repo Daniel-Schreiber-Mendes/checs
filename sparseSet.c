@@ -2,19 +2,16 @@
 #include <string.h>
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, 
-						 uintEC const maxComponentsHint, uintEC const maxComponentsDevnHint)
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint)
 {
 	*set = (SparseSet)
 	{
 		.sparse = checs_malloc(sizeof(uintEC) * maxComponentsHint), 
 		.sparseCapacity = maxComponentsHint, 
 
-		.dense = checs_malloc(sizeof(uintEC) * maxComponentsHint), 
+		.dense = checs_calloc(sizeof(uintEC), maxComponentsHint), 
 		.denseCapacity = maxComponentsHint, 
 		.denseSize = 0,
-
-		.maxComponentsDevnHint = maxComponentsDevnHint,
 
 		.components = checs_malloc(componentSize * maxComponentsHint), 
 		.cki = cki, 
@@ -34,14 +31,12 @@ void sparseSet_destruct(SparseSet const *const set)
 void sparseSet_entity_add(SparseSet *const set, EntityId const entity)
 {
 	if(entity >= set->sparseCapacity)
-		set->sparse = realloc(set->sparse, sizeof(uintEC) * (set->sparseCapacity = entity * 2));
-
-	if((set->sparse[entity] = set->denseSize++) >= set->denseCapacity)
 	{
-		set->dense = realloc(set->dense, sizeof(uintEC) * entity * 2);
-		set->components = realloc(set->components, set->componentSize * entity * 2);
-		set->denseCapacity = entity * 2;
+		set->sparse = realloc(set->sparse, sizeof(uintEC) * (set->sparseCapacity = entity * 2));
 	}
+
+	set->sparse[entity] = set->denseSize++;
+	checs_assert(set->denseSize <= set->denseCapacity);
 	set->dense[set->sparse[entity]] = entity;
 }
 
