@@ -166,12 +166,13 @@ EntityId  entityManager_entity_get_by_tag(uintEC const tag);
 #define   entityManager_entity_generate(...)\
 	({  _entityManager_entity_generate(components_convertToKey(__VA_ARGS__)); })
 
-#define   entityManager_foreach(entity) \
-	for (uintEC i=0, entity=entitys[0]; i < entityCount; entity = entitys[++i])
+#define   entityManager_foreach(entity)\
+	for (uintEC entity##i=0, entity=entitys[0]; entity##i < entityCount; entity = entitys[++entity##i])
 /*this will only be called inside a system. 
 The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
 this means one doesnt have to give the data as an argument since their name is already know.
-entity is only the alias that is going to be used for the entityId's inside the array*/
+entity is only the alias that is going to be used for the entityId's inside the array. We concatenate the counter variable i with the alias of the entitys to prevent 
+name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
