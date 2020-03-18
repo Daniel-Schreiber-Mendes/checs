@@ -201,7 +201,7 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 	/*updating the value of the alias for a member of a component*/
 
 #define componentManager_components_foreach(Type, alias, entityAlias)\
-	Type *alias = &((Type*)getSparseSet(Type)->components)[0];\
+	alias = &((Type*)getSparseSet(Type)->components)[0];\
 	uintEC entityAlias = getSparseSet(Type)->dense[0];\
 	for (uintEC indx=0; indx < getSparseSet(Type)->denseSize; entityAlias = getSparseSet(Type)->dense[++indx], alias = &((Type*)getSparseSet(Type)->components)[indx])
 
