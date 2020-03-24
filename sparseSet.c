@@ -2,7 +2,7 @@
 #include <string.h>
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint)
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint, void(*component_destructor)(void*))
 {
 	*set = (SparseSet)
 	{
@@ -15,7 +15,8 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKe
 
 		.components = checs_malloc(componentSize * maxComponentsHint), 
 		.cki = cki, 
-		.componentSize = componentSize
+		.componentSize = componentSize,
+		.component_destructor = component_destructor
 	};
 }
 

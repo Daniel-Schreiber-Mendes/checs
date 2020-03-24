@@ -105,6 +105,7 @@ typedef struct
 	void* components;
 	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
+	void(*component_destructor)(void*);
 }
 SparseSet;
 
@@ -176,7 +177,7 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
-void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint);
+void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void*));
 void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
 void    componentManager_entity_erase(EntityId const entity);
 void   _componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
@@ -184,8 +185,8 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_element_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
-#define componentManager_component_register(Type, maxComponentsHint)\
-	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint);
+#define componentManager_component_register(Type, maxComponentsHint, component_destructor)\
+	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define componentManager_component_use(Type, alias) Type *alias
@@ -251,8 +252,7 @@ void    systemManager_entity_components_added(EntityId const entity, ComponentKe
 	_systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, 
-						 uintEC const maxComponentsDevnHint);
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsDevnHint, void(*component_destructor)(void*));
 void sparseSet_destruct(SparseSet const *const set);
 void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
