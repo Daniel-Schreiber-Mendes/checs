@@ -1,8 +1,6 @@
 #ifndef CHECS_H
 #define CHECS_H
-
 #include "ecs.h"
-
 
 /*no functionality is allowed here. Only redefinitions and grouping of functions */
 
@@ -12,6 +10,15 @@
 	componentManager_terminate();\
 	commandManager_terminate();\
 	eventManager_terminate();
+
+
+#define checs_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount, tag_count, componentCount, maxEntitysHint, commandCount, eventCount)\
+	systemManager_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount);\
+	entityManager_init(tag_count);\
+	componentManager_init(componentCount, maxEntitysHint);\
+	commandManager_init(commandCount);\
+	eventManager_init(eventCount);
+
 
 #define checs_component_register(ComponentType, maxComponentsHint, component_destructor) componentManager_component_register(ComponentType, maxComponentsHint, component_destructor);
 #define checs_component_use(ComponentType, alias) componentManager_component_use(ComponentType, alias)
@@ -23,11 +30,11 @@
 
 #define checs_system_parameters EntityId *const entitys, uintEC const entityCount
 #define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...) systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, __VA_ARGS__)
-#define checs_systems_call(callType) systemManager_systems_call(callType)
+#define checs_update() systemManager_update()
+#define checs_draw() systemManager_draw()
 
 
 #define checs_task_register(callback, callType) systemManager_task_register(callback, callType)
-#define checs_tasks_call(callType) systemManager_tasks_call(callType)
 
 
 #define checs_entity_erase(entity) entityManager_entity_erase(entity)

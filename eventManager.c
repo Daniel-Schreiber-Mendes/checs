@@ -9,15 +9,12 @@
 //systems remove the events is also a bad idea because how does one system know, if every system that needed the events had already
 //polled them? and this is also extremely bad for concurrency. a double buffer solves this. the capacitys array is the same for both
 //buffers because they should always have the same size, only the content should differ.
-
-
 //double buffered event queue
 //db stands for double buffer
 void **events_db[2];
 uint8_t *eventCounts_db[2]; //number of current events in each event queue
 uint8_t db_index = 0; 
 uint8_t *eventCapacitys; //number of maximum events in each eventqueue
-
 static uintE signatureCount;
 
 void eventManager_init(uintE const n_signatureCount)
@@ -33,22 +30,22 @@ void eventManager_init(uintE const n_signatureCount)
 
 void eventManager_terminate(void)
 {
+	checs_free(eventCapacitys);
 	for (uint8_t i=0; i < 2; ++i)
 	{
 		for (uintE j=0; j < signatureCount; ++j)
 		{
-			//checs_free(events_db[i][j]);
+			checs_free(events_db[i][j]);
 		}
 		checs_free(events_db[i]);
 		checs_free(eventCounts_db[i]);
 	}
-	checs_free(eventCapacitys);
 }
 
 
+	//swapping the buffers and then clearing the one that is now not going to be used
 void eventManager_buffers_swap(void)
 {
 	db_index = 1 - db_index;
 	memset(eventCounts_db[db_index], 0, sizeof(uint8_t) * signatureCount);
-	//swapping the buffers and then clearing the one that is now not going to be used
 }

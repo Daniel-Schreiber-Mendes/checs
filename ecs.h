@@ -87,8 +87,8 @@ typedef void(*CommandCallback)(void*);
 
 typedef enum
 {
-	ON_UPDATE,
-	ON_DRAW	
+	CHECS_ON_UPDATE,
+	CHECS_ON_DRAW	
 }
 CallType; //specifies when the system/task is called
 
@@ -105,7 +105,7 @@ typedef struct
 	void* components;
 	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
-	void(*component_destructor)(void*);
+	void(*component_destructor)(void *const);
 }
 SparseSet;
 
@@ -157,7 +157,7 @@ extern uint8_t db_index;
 extern uint8_t *eventCapacitys;
 
 
-void      entityManager_init(void);
+void      entityManager_init(uintEC const tag_count);
 void 	  entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey const key);
 void      entityManager_entity_erase(EntityId const e);
@@ -177,13 +177,13 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
-void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void*));
+void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const));
 void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
 void    componentManager_entity_erase(EntityId const entity);
 void   _componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
 
 //macro to make the code shorter and more expressive
-#define getSparseSet(Type) hashMap_element_get(&sets, SparseSet, hashMap_hash(&sets, Type))
+#define getSparseSet(Type) hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
 #define componentManager_component_register(Type, maxComponentsHint, component_destructor)\
 	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor);
@@ -223,7 +223,7 @@ element in the dense array of the sparseSet with the smallest number of componen
 required one. This makes iterating pretty fast.*/
 
 #define key_evaluate(r, key, Type)\
-	*(key) |= 1 << hashMap_element_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki;
+	*(key) |= 1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki;
 	/*@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
 	given as parameter
 	before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
@@ -241,12 +241,12 @@ void    systemManager_init(uintST const n_systemUpdateCount, uintST const system
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);
 void    systemManager_terminate(void);
 void   _systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
-void    systemManager_systems_call(CallType const callType);
+void    systemManager_update(void);
+void 	systemManager_draw(void);
 void    systemManager_entity_register(EntityId const entity, ComponentKey const key);
 void    systemManager_entity_erase(EntityId const entity);
 void    systemManager_task_register(TaskCallback const callback, CallType const callType);
-void    systemManager_tasks_call(CallType const callType);
-void    systemManager_entity_components_added(EntityId const entity, ComponentKey const key);
+
 
 #define systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
 	_systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
@@ -286,10 +286,6 @@ void    eventManager_buffers_swap(void);
 		events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
 	}\
 	memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));
-	//because an event is pretty lightweight, the size doubles everytime the size exceeds the capacity instead of letting the user
-	//decide by which rate it will grow. addionally it is pretty hard for the user to get to know how much it should be
-
-//events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
 
 
 #define eventManager_event_register(EventDataType, signature, maxEventsHint)\
