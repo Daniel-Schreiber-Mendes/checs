@@ -49,6 +49,7 @@ void _componentManager_component_register(ComponentSignature const sig, size_t c
 	SparseSet *const set = checs_malloc(sizeof(SparseSet));
 	hashMap_insert(&sets, sig, set);
 	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor);
+	checs_assert(registeredComponentsCount + 1 <= componentCount);
 	setIndices[registeredComponentsCount++] = sig;
 }
 
