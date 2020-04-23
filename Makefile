@@ -1,5 +1,5 @@
-
-
+SRC = entityManager.c componentManager.c systemManager.c sparseSet.c system.c commandManager.c eventManager.c
+OBJ = $(SRC:.c=.o)
 LFLAGS = -shared -o
 CFLAGS = -c -g -fpic -std=c99 -O1
 
@@ -8,23 +8,5 @@ make: 	       				  entityManager.o componentManager.o systemManager.o sparseSet
 	mv libchecs.so /usr/local/lib/
 	cp *.h /usr/local/include/checs/
 
-entityManager.o: entityManager.c
-	gcc $(CFLAGS) entityManager.c
-
-systemManager.o: systemManager.c
-	gcc $(CFLAGS) systemManager.c
-
-componentManager.o: componentManager.c
-	gcc $(CFLAGS) componentManager.c
-
-sparseSet.o: sparseSet.c
-	gcc $(CFLAGS) sparseSet.c
-
-system.o: system.c
-	gcc $(CFLAGS) system.c
-
-commandManager.o: commandManager.c
-	gcc $(CFLAGS) commandManager.c
-
-eventManager.o: eventManager.c
-	gcc $(CFLAGS) eventManager.c
+%.o: %.c
+	gcc -c $(CFLAGS) $*.c

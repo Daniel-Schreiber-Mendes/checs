@@ -1,6 +1,5 @@
 #ifndef ECS_H
 #define ECS_H
-
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/variadic/to_seq.hpp>
 #include <checl/containers.h>
@@ -115,6 +114,21 @@ typedef struct
 	uintEC* sparse; //sparse packed array of indices to dense array
 	uintEC sparseCapacity; //maximum number of elements
 
+	uintEC* dense; //dense array of entityId's
+	uintEC denseCapacity; //maximum number of elements
+	uintEC denseSize; //current number of elements;
+
+	ComponentKeyIndex cki; //signature of components that are stored
+}
+SparseSet;
+
+
+
+typedef struct
+{
+	uintEC* sparse; //sparse packed array of indices to dense array
+	uintEC sparseCapacity; //maximum number of elements
+
 	uintEC* dense; //dense array of entitys
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
@@ -138,9 +152,7 @@ typedef struct
 Task;
 
 
-/*TODO: 
- - Telling the ecs to create file with number of entitys each system and sparseSet has at its maximum 
-   and how many entitys were registered. These values can in the next run be fed back into the system for minimal memory allocations
+/*TODO:  
  -creating a seperate memory pool for the values that are passed to the commands
  */
 

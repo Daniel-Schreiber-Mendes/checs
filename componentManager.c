@@ -12,6 +12,7 @@ static uintEC keysCapacity; //highest id that can be currently stored
 
 void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint)
 {
+	checs_assert(n_componentCount > 0 && maxEntitysHint > 0);
 	hashMap_construct(&sets, (componentCount = n_componentCount));
 	keys = checs_calloc(sizeof(ComponentKey), (keysCapacity = maxEntitysHint));
 	setIndices = checs_calloc(sizeof(uint16_t), componentCount);
