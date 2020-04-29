@@ -68,13 +68,13 @@
 //that we want to set) we get the appropriate componentKey
 
 
-typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated
+typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated. this is a key which corresponds to an entity
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
 typedef uint16_t ComponentId; //unique identifier for a instanciated component
 typedef uint16_t uintEC; //any number that stores values that goes from 0 to the maximum value EntityId can hold
 typedef uint8_t uintST; //any number that goes from 0 to the maximum number of systems/tasks
-typedef uint16_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering
-typedef uint8_t ComponentKeyIndex;
+typedef uint16_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
+typedef uint8_t ComponentKeyIndex; //this is the place of the bit that indicates that an entity has this component
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
 typedef uint8_t EventSignature; 
 typedef uint8_t CommandSignature;
@@ -105,23 +105,9 @@ typedef struct
 	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
 	void(*component_destructor)(void *const);
+	void(*component_constructor)(void *const);
 }
 SparseSet;
-
-
-typedef struct
-{
-	uintEC* sparse; //sparse packed array of indices to dense array
-	uintEC sparseCapacity; //maximum number of elements
-
-	uintEC* dense; //dense array of entityId's
-	uintEC denseCapacity; //maximum number of elements
-	uintEC denseSize; //current number of elements;
-
-	ComponentKeyIndex cki; //signature of components that are stored
-}
-SparseSet;
-
 
 
 typedef struct
@@ -189,7 +175,7 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
-void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const));
+void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const));
 void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
 void    componentManager_entity_erase(EntityId const entity);
 void   _componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
@@ -197,8 +183,8 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
-#define componentManager_component_register(Type, maxComponentsHint, component_destructor)\
-	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor);
+#define componentManager_component_register(Type, maxComponentsHint, component_destructor, component_constructor)\
+	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define componentManager_component_use(Type, alias) Type *alias
@@ -224,6 +210,10 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 #define componentManager_componentMatches_foreach(entity, smallestTypeHint, ...)\
 	for (uintEC i=0, entity=getSparseSet(smallestTypeHint)->dense[i], key=keys[entity]; i < getSparseSet(smallestTypeHint)->denseSize; ++i, key = keys[++entity])\
 		if (key_match(components_convertToKey(__VA_ARGS__), key))
+
+//iterates over all entitys inside the sparseset of an component without getting components
+#define componentManager_component_entity_foreach(Type, entity)\
+	for (uintEC i=0, entity=getSparseSet(Type)->dense[i]; i < getSparseSet(Type)->denseSize; ++i)
 /*entity is the alias that is going to be used for the next entity in the array that matches the key
 iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
 if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
@@ -264,7 +254,7 @@ void    systemManager_task_register(TaskCallback const callback, CallType const 
 	_systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsDevnHint, void(*component_destructor)(void*));
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsDevnHint, void(*component_destructor)(void *const), void(*component_constructor)(void *const));
 void sparseSet_destruct(SparseSet const *const set);
 void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
 void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
@@ -283,7 +273,6 @@ void 	commandManager_terminate(void);
 void    commandManager_command_publish(CommandSignature const signature, void* data);
 /* because only void* are passed this is much faster than passing each element by value*/
 void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
-
 void 	eventManager_init(uintE const n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);

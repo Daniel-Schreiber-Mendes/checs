@@ -45,11 +45,11 @@ void componentManager_terminate(void)
 }
 
 
-void _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const))
+void _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
 	SparseSet *const set = checs_malloc(sizeof(SparseSet));
 	hashMap_insert(&sets, sig, set);
-	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor);
+	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor);
 	checs_assert(registeredComponentsCount + 1 <= componentCount);
 	setIndices[registeredComponentsCount++] = sig;
 }
@@ -67,12 +67,7 @@ void componentManager_entity_erase(EntityId const entity)
 	{
 		if(key_match(1 << i, keys[entity]))
 		{
-			SparseSet *const set = hashMap_get(&sets, SparseSet, setIndices[i]);
-			sparseSet_entity_remove(set, entity);
-			if (set->component_destructor)
-			{
-				set->component_destructor(set->components + entity * set->componentSize);
-			}
+			sparseSet_entity_remove(hashMap_get(&sets, SparseSet, setIndices[i]), entity);
 		}
 	}
 	keys[entity] = 0;

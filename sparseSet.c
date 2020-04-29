@@ -2,7 +2,8 @@
 #include <string.h>
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint, void(*component_destructor)(void*))
+void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint, 
+						 void(*component_destructor)(void *const), void(*component_constructor)(void *const))
 {
 	*set = (SparseSet)
 	{
@@ -16,7 +17,8 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKe
 		.components = checs_malloc(componentSize * maxComponentsHint), 
 		.cki = cki, 
 		.componentSize = componentSize,
-		.component_destructor = component_destructor
+		.component_destructor = component_destructor,
+		.component_constructor = component_constructor
 	};
 }
 
@@ -39,6 +41,11 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity)
 	set->sparse[entity] = set->denseSize++;
 	checs_assert(set->denseSize <= set->denseCapacity);
 	set->dense[set->sparse[entity]] = entity;
+
+	if (set->component_constructor)
+	{
+		set->component_constructor(set->components + set->sparse[entity] * set->componentSize);
+	}
 }
 
 
@@ -49,6 +56,10 @@ void sparseSet_entity_remove(SparseSet *const set, EntityId const entity)
 	//this would mean the data of the last element in the components array would be copied to itself, because the last element gets
 	//copied to the place that just got freed. when memory overlaps you need to use memmove which is much slower. the operation
 	//would anyway be wasted since only the size needs to be decremented.
+	if (set->component_destructor)
+	{
+		set->component_destructor(set->components + set->sparse[entity] * set->componentSize);
+	}
 	if(set->sparse[entity] < set->denseSize - 1) //this needs to be checked because if it evaluates to false that means the entity to be removed
 	{
 		memcpy(set->components + set->sparse[entity] * set->componentSize, set->components + set->denseSize * set->componentSize, set->componentSize); 

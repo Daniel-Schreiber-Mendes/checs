@@ -20,13 +20,13 @@
 	eventManager_init(eventCount);
 
 
-#define checs_component_register(ComponentType, maxComponentsHint, component_destructor) componentManager_component_register(ComponentType, maxComponentsHint, component_destructor);
+#define checs_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor) componentManager_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor);
 #define checs_component_use(ComponentType, alias) componentManager_component_use(ComponentType, alias)
 #define checs_component_get(ComponentType, alias, entity) componentManager_component_get(ComponentType, alias, entity)
 #define checs_component_get_once(ComponentType, alias, entity) componentManager_component_get_once(ComponentType, alias, entity)
 #define checs_components_foreach(ComponentType, alias, entityAlias) componentManager_components_foreach(ComponentType, alias, entityAlias)
 #define checs_componentMatches_foreach(entity, smallestComponentTypeHint, ...) componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, __VA_ARGS__)
-
+#define checs_component_entity_foreach(Type, entity) componentManager_component_entity_foreach(Type, entity)
 
 #define checs_system_parameters EntityId *const entitys, uintEC const entityCount
 #define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...) systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, __VA_ARGS__)
