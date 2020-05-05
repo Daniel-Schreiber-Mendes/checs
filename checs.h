@@ -27,6 +27,7 @@
 #define checs_components_foreach(ComponentType, alias, entityAlias) componentManager_components_foreach(ComponentType, alias, entityAlias)
 #define checs_componentMatches_foreach(entity, smallestComponentTypeHint, ...) componentManager_componentMatches_foreach(entity, smallestComponentTypeHint, __VA_ARGS__)
 #define checs_component_entity_foreach(Type, entity) componentManager_component_entity_foreach(Type, entity)
+#define checs_entity_has_component(Type, entity) componentManager_entity_has_component(Type, entity)
 
 #define checs_system_parameters EntityId *const entitys, uintEC const entityCount
 #define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...) systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, __VA_ARGS__)

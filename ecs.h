@@ -205,7 +205,7 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 	for (uintEC indx=0; indx < getSparseSet(Type)->denseSize; entityAlias = getSparseSet(Type)->dense[++indx], alias = &((Type*)getSparseSet(Type)->components)[indx])
 
 #define componentManager_component_get_once(Type, alias, entity)\
-	Type *alias = &(((Type*)(getSparseSet(Type)->components))[getSparseSet(Type)->sparse[entity]]);
+	Type *const alias = &(((Type*)(getSparseSet(Type)->components))[getSparseSet(Type)->sparse[entity]]);
 
 #define componentManager_componentMatches_foreach(entity, smallestTypeHint, ...)\
 	for (uintEC i=0, entity=getSparseSet(smallestTypeHint)->dense[i], key=keys[entity]; i < getSparseSet(smallestTypeHint)->denseSize; ++i, key = keys[++entity])\
@@ -223,6 +223,13 @@ entitys everytime we need this functionality. this results also in a much smalle
 smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
 element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
 required one. This makes iterating pretty fast.*/
+
+#define componentManager_entity_has_component(Type, entity)\
+	({\
+		ComponentKey key = (1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki) | keys[entity];\
+		key;\
+	})
+
 
 #define key_evaluate(r, key, Type)\
 	*(key) |= 1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki;
