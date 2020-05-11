@@ -222,8 +222,8 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 	checs_entity_assert(Type, entity);\
 	Type *const alias = &(((Type*)(getSparseSet(Type)->components))[getSparseSet(Type)->sparse[entity]]);
 
-#define componentManager_componentMatches_foreach(entity, smallestTypeHint, ...)\
-	for (uintEC i=0, entity=getSparseSet(smallestTypeHint)->dense[i], key=keys[entity]; i < getSparseSet(smallestTypeHint)->denseSize; ++i, key = keys[++entity])\
+#define componentManager_componentMatches_foreach(entityAlias, smallestTypeHint, ...)\
+	for (uintEC i=0, entityAlias=getSparseSet(smallestTypeHint)->dense[i], key=keys[entityAlias]; i < getSparseSet(smallestTypeHint)->denseSize; ++i, key = keys[++entityAlias])\
 		if (key_match(components_convertToKey(__VA_ARGS__), key))
 
 //iterates over all entitys inside the sparseset of an component without getting components
