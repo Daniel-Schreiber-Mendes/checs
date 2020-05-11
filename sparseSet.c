@@ -56,6 +56,7 @@ void sparseSet_entity_remove(SparseSet *const set, EntityId const entity)
 	//this would mean the data of the last element in the components array would be copied to itself, because the last element gets
 	//copied to the place that just got freed. when memory overlaps you need to use memmove which is much slower. the operation
 	//would anyway be wasted since only the size needs to be decremented.
+	checs_assert(entity < set->sparseCapacity);
 	if (set->component_destructor)
 	{
 		set->component_destructor(set->components + set->sparse[entity] * set->componentSize);

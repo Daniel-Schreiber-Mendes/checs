@@ -85,11 +85,11 @@ void systemManager_draw(void)
 
 static void tasks_call(uintST i, uintST const i_end)
 {
-	for (; i < i_end; ++i)
+	while (i < i_end)
 	{
 		if (tasks[i].active)
 		{
-			tasks[i].callback();
+			tasks[i++].callback();
 		}
 	}
 }
@@ -97,12 +97,13 @@ static void tasks_call(uintST i, uintST const i_end)
 
 static void systems_call(uintST i, uintST const i_end)
 {
-	for (; i < i_end; ++i)
+	while (i < i_end)
 	{
 		if(systems[i].active)
 		{
 			systems[i].callback(systems[i].dense, systems[i].denseSize);
 		}
+		++i;
 	}
 }
 
@@ -127,9 +128,9 @@ void systemManager_entity_erase(EntityId const entity)
 		if(key_match(systems[i].key, keys[entity]))
 		{
 			system_entity_remove(&systems[i], entity);
-			keys[entity] = 0;
 		}
 	}
+	keys[entity] = 0;
 }
 
 

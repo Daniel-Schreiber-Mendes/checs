@@ -51,8 +51,17 @@
 			printf("Checs-Assertion: %s failed. Line: %u, File: %s\n", #expr, __LINE__, __FILE__);\
 			exit(-1);\
 		}
+
+	//checks if it is allowed to acces the entity
+	#define checs_entity_assert(Type, entity)\
+		{\
+			EntityId e = entity;\
+			checs_assert(e < getSparseSet(Type)->sparseCapacity);\
+			checs_assert(getSparseSet(Type)->sparse[e] < getSparseSet(Type)->denseCapacity);\
+		}
 #else
 	#define checs_assert(expr) (void)0
+	#define checs_entity_assert(Type, entity) (void)0
 #endif
 
 #ifdef CHECS_STATS
@@ -187,15 +196,20 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
-#define componentManager_component_use(Type, alias) Type *alias
+#define componentManager_component_mut_use(Type, alias) Type *alias
 	/*create vairable that can be used by component_get
 	get the sparse array which is going to be indexed for this ComponentType
 	sets is global to avoid calling a simple get() function everytime which decreases performance*/
+
+#define componentManager_component_use(Type, alias) Type const *alias //by using this one can not change the components, only get its values. this means by default
+	//one can not modify a component, unless you exolicitely use the mut version of the macro
+
 
 #define componentManager_entity_components_add(entity, ...)\
 	_componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 
 #define componentManager_component_get(Type, alias, entity)\
+	checs_entity_assert(Type, entity);\
 	alias = &((Type*)getSparseSet(Type)->components)[getSparseSet(Type)->sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
@@ -205,6 +219,7 @@ void   _componentManager_entity_components_add(EntityId const entity, ComponentK
 	for (uintEC indx=0; indx < getSparseSet(Type)->denseSize; entityAlias = getSparseSet(Type)->dense[++indx], alias = &((Type*)getSparseSet(Type)->components)[indx])
 
 #define componentManager_component_get_once(Type, alias, entity)\
+	checs_entity_assert(Type, entity);\
 	Type *const alias = &(((Type*)(getSparseSet(Type)->components))[getSparseSet(Type)->sparse[entity]]);
 
 #define componentManager_componentMatches_foreach(entity, smallestTypeHint, ...)\

@@ -21,6 +21,7 @@
 
 
 #define checs_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor) componentManager_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor);
+#define checs_component_mut_use(ComponentType, alias) componentManager_component_mut_use(ComponentType, alias)
 #define checs_component_use(ComponentType, alias) componentManager_component_use(ComponentType, alias)
 #define checs_component_get(ComponentType, alias, entity) componentManager_component_get(ComponentType, alias, entity)
 #define checs_component_get_once(ComponentType, alias, entity) componentManager_component_get_once(ComponentType, alias, entity)
