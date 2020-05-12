@@ -9,15 +9,17 @@
 	systemManager_terminate();\
 	componentManager_terminate();\
 	commandManager_terminate();\
-	eventManager_terminate();
+	eventManager_terminate();\
+	attributeManager_terminate();
 
 
-#define checs_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount, tag_count, componentCount, maxEntitysHint, commandCount, eventCount)\
+#define checs_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount, tag_count, componentCount, maxEntitysHint, commandCount, eventCount, maxAttributesHint)\
 	systemManager_init(systemUpdateCount, systemDrawCount, taskUpdateCount, taskDrawCount);\
 	entityManager_init(tag_count);\
 	componentManager_init(componentCount, maxEntitysHint);\
 	commandManager_init(commandCount);\
-	eventManager_init(eventCount);
+	eventManager_init(eventCount);\
+	attributeManager_init(maxAttributesHint);
 
 
 #define checs_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor) componentManager_component_register(ComponentType, maxComponentsHint, component_destructor, component_constructor);

@@ -89,6 +89,8 @@ typedef uint8_t EventSignature;
 typedef uint8_t CommandSignature;
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
 typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
+typedef uint8_t uintA; //stores any number that goes from 0 to the maximum number of attributes
+typedef uint16_t AttributeSignature; //the signature of a AttributeType which depends on the order of registering this is the hashed value of the name of the attribute
 typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
@@ -162,6 +164,7 @@ extern void **events_db[2];
 extern uint8_t *eventCounts_db[2];
 extern uint8_t db_index; 
 extern uint8_t *eventCapacitys;
+extern HashMap attributes;
 
 
 void      entityManager_init(uintEC const tag_count);
@@ -315,6 +318,22 @@ void    eventManager_buffers_swap(void);
 	events_db[db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
 	events_db[1 - db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
 	eventCapacitys[signature] = maxEventsHint;
+
+
+void attributeManager_init(uintA const maxAttributesHint);
+void attributeManager_terminate(void);
+void _attributeManager_attribute_register(AttributeSignature const sig, uintA const attributeCount);
+
+#define getAttributeVec(Type) hashMap_get(&attributes, Vector, hashMap_hash(&attributes, Type))
+
+#define checs_attribute_register(Type, attributeCount)\
+	_attributeManager_attribute_register(hashMap_hash(&attributes, Type), attributeCount)
+
+#define checs_entity_attribute_add(Type, entity)\
+	vector_push_back(getAttributeVec(Type), Type, entity);
+
+#define checs_attribute_entity_foreach(Type, entityAlias)\
+	vector_foreach(getAttributeVec(Type), Type, entityAlias)
 
 
 #endif
