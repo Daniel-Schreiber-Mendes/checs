@@ -174,10 +174,10 @@ void      entityManager_entity_erase(EntityId const e);
 void      entitymanager_entity_tag_add(EntityId const entity, uintEC const tag);
 EntityId  entityManager_entity_get_by_tag(uintEC const tag);
 
-#define   entityManager_entity_generate(...)\
+#define   checs_entity_generate(...)\
 	({  _entityManager_entity_generate(components_convertToKey(__VA_ARGS__)); })
 
-#define   entityManager_foreach(entity)\
+#define   checs_entity_foreach(entity)\
 	for (uintEC entity##i=0, entity=entitys[0]; entity##i < entityCount; entity = entitys[++entity##i])
 /*this will only be called inside a system. 
 The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
@@ -187,50 +187,50 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
 void 	componentManager_terminate(void);
-void   _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const));
+void    componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const));
 void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
 void    componentManager_entity_erase(EntityId const entity);
-void   _componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
+void    componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
 
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
-#define componentManager_component_register(Type, maxComponentsHint, component_destructor, component_constructor)\
-	_componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
+#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor)\
+	componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
-#define componentManager_component_mut_use(Type, alias) Type *alias
+#define checs_component_mut_use(Type, alias) Type *alias
 	/*create vairable that can be used by component_get
 	get the sparse array which is going to be indexed for this ComponentType
 	sets is global to avoid calling a simple get() function everytime which decreases performance*/
 
-#define componentManager_component_use(Type, alias) Type const *alias //by using this one can not change the components, only get its values. this means by default
+#define checs_component_use(Type, alias) Type const *alias //by using this one can not change the components, only get its values. this means by default
 	//one can not modify a component, unless you exolicitely use the mut version of the macro
 
 
-#define componentManager_entity_components_add(entity, ...)\
-	_componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
+#define checs_entity_components_add(entity, ...)\
+	componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 
-#define componentManager_component_get(Type, alias, entity)\
+#define checs_component_get(Type, alias, entity)\
 	checs_entity_assert(Type, entity);\
 	alias = &((Type*)getSparseSet(Type)->components)[getSparseSet(Type)->sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
-#define componentManager_components_foreach(Type, alias, entityAlias)\
+#define checs_components_foreach(Type, alias, entityAlias)\
 	alias = &((Type*)getSparseSet(Type)->components)[0];\
 	uintEC entityAlias = getSparseSet(Type)->dense[0];\
 	for (uintEC indx=0; indx < getSparseSet(Type)->denseSize; entityAlias = getSparseSet(Type)->dense[++indx], alias = &((Type*)getSparseSet(Type)->components)[indx])
 
-#define componentManager_component_get_once(Type, alias, entity)\
+#define checs_component_get_once(Type, alias, entity)\
 	checs_entity_assert(Type, entity);\
 	Type *const alias = &(((Type*)(getSparseSet(Type)->components))[getSparseSet(Type)->sparse[entity]]);
 
-#define componentManager_componentMatches_foreach(entityAlias, smallestTypeHint, ...)\
+#define checs_componentMatches_foreach(entityAlias, smallestTypeHint, ...)\
 	for (uintEC i=0, entityAlias=getSparseSet(smallestTypeHint)->dense[i], key=keys[entityAlias]; i < getSparseSet(smallestTypeHint)->denseSize; ++i, key = keys[++entityAlias])\
 		if (key_match(components_convertToKey(__VA_ARGS__), key))
 
 //iterates over all entitys inside the sparseset of an component without getting components
-#define componentManager_component_entity_foreach(Type, entity)\
+#define checs_component_entity_foreach(Type, entity)\
 	for (uintEC i=0, entity=getSparseSet(Type)->dense[i]; i < getSparseSet(Type)->denseSize; ++i)
 /*entity is the alias that is going to be used for the next entity in the array that matches the key
 iterates over all entitys in the sparseSet with the smallest size. it then looks up the key of the entity in the keys[] array.
@@ -242,7 +242,7 @@ smallestComponentTypeHint is the component specified by the user which he thinks
 element in the dense array of the sparseSet with the smallest number of components, lookup its key and see if it matches the 
 required one. This makes iterating pretty fast.*/
 
-#define componentManager_entity_has_component(Type, entity)\
+#define checs_entity_has_component(Type, entity)\
 	({\
 		ComponentKey key = (1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki) | keys[entity];\
 		key;\
@@ -267,7 +267,7 @@ required one. This makes iterating pretty fast.*/
 void    systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
 						uintST const n_taskUpdateCount, uintST const taskDrawCount);
 void    systemManager_terminate(void);
-void   _systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
+void    systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
 void    systemManager_update(void);
 void 	systemManager_draw(void);
 void    systemManager_entity_register(EntityId const entity, ComponentKey const key);
@@ -275,8 +275,8 @@ void    systemManager_entity_erase(EntityId const entity);
 void    systemManager_task_register(TaskCallback const callback, CallType const callType);
 
 
-#define systemManager_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
-	_systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
+#define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
+	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
 void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsDevnHint, void(*component_destructor)(void *const), void(*component_constructor)(void *const));
@@ -302,11 +302,11 @@ void 	eventManager_init(uintE const n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
 
-#define eventManager_events_poll(EventDataType, signature, alias)\
+#define checs_events_poll(EventDataType, signature, alias)\
 	for (EventDataType* alias = &((EventDataType*)events_db[1 - db_index][signature])[eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = &((EventDataType*)events_db[1 - db_index][signature])[--eventCounts_db[1 - db_index][signature]])
 
 
-#define eventManager_event_publish(EventDataType, signature, data)\
+#define checs_event_publish(EventDataType, signature, data)\
 	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])\
 	{\
 		events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
@@ -314,7 +314,7 @@ void    eventManager_buffers_swap(void);
 	memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));
 
 
-#define eventManager_event_register(EventDataType, signature, maxEventsHint)\
+#define checs_event_register(EventDataType, signature, maxEventsHint)\
 	events_db[db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
 	events_db[1 - db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
 	eventCapacitys[signature] = maxEventsHint;
@@ -330,10 +330,10 @@ void _attributeManager_attribute_register(AttributeSignature const sig, uintA co
 	_attributeManager_attribute_register(hashMap_hash(&attributes, Type), attributeCount)
 
 #define checs_entity_attribute_add(Type, entity)\
-	vector_push_back(getAttributeVec(Type), Type, entity);
+	vector_push_back(getAttributeVec(Type), EntityId, entity);
 
 #define checs_attribute_entity_foreach(Type, entityAlias)\
-	vector_foreach(getAttributeVec(Type), Type, entityAlias)
+	vector_foreach(getAttributeVec(Type), EntityId, entityAlias)
 
 
 #endif

@@ -57,7 +57,7 @@ void systemManager_terminate(void)
 }
 
 
-void _systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
+void systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
 {
 	system_construct(&systems[systemTypeCounts[callType]++], callback, key, maxEntitysHint, maxEntitysDevnHint);
 }

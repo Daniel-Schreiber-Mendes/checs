@@ -44,7 +44,7 @@ void componentManager_terminate(void)
 }
 
 
-void _componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
+void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
 	SparseSet *const set = checs_malloc(sizeof(SparseSet));
 	hashMap_insert(&sets, sig, set);
@@ -57,7 +57,7 @@ void _componentManager_component_register(ComponentSignature const sig, size_t c
 void componentManager_entity_register(EntityId const entity, ComponentKey const key)
 {
 	checs_assert(entity < keysCapacity);
-	_componentManager_entity_components_add(entity, key);
+	componentManager_entity_components_add(entity, key);
 }
 
 void componentManager_entity_erase(EntityId const entity)
@@ -75,7 +75,7 @@ void componentManager_entity_erase(EntityId const entity)
 
 //the difference between key and keys[entity] is that key signifies only the new components while keys[entity] signifies
 //all components the entity has. because of this it is important that key is used when iterating over all sparsesets.
-void _componentManager_entity_components_add(EntityId const entity, ComponentKey const key)
+void componentManager_entity_components_add(EntityId const entity, ComponentKey const key)
 {
 	checs_assert(key != 0);
 	keys[entity] |= key;
