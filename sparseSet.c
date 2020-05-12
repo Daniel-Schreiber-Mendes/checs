@@ -10,7 +10,7 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKe
 		.sparse = checs_malloc(sizeof(uintEC) * maxComponentsHint), 
 		.sparseCapacity = maxComponentsHint, 
 
-		.dense = checs_calloc(sizeof(uintEC), maxComponentsHint), 
+		.dense = checs_calloc(maxComponentsHint, sizeof(uintEC)), 
 		.denseCapacity = maxComponentsHint, 
 		.denseSize = 0,
 
@@ -25,6 +25,7 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKe
 
 void sparseSet_destruct(SparseSet const *const set)
 {
+	checs_assert(set);
 	checs_free(set->dense);
 	checs_free(set->sparse);
 	checs_free(set->components);

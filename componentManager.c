@@ -14,8 +14,8 @@ void componentManager_init(uintCS const n_componentCount, uintEC const maxEntity
 {
 	checs_assert(n_componentCount > 0 && maxEntitysHint > 0);
 	hashMap_construct(&sets, (componentCount = n_componentCount));
-	keys = checs_calloc(sizeof(ComponentKey), (keysCapacity = maxEntitysHint));
-	setIndices = checs_calloc(sizeof(uint16_t), componentCount);
+	keys = checs_calloc((keysCapacity = maxEntitysHint), sizeof(ComponentKey));
+	setIndices = checs_calloc(componentCount, sizeof(uint16_t));
 }
 
 
@@ -31,14 +31,13 @@ void componentManager_terminate(void)
 			componentManager_entity_erase(i);
 		}
 	}
-	for(uintCS i=0; i < sets.cap; ++i)
-	{
-		if (sets.data[i] != NULL)
-		{
-			sparseSet_destruct(sets.data[i]);
-			checs_free(sets.data[i]);
-		}
-	}
+
+	hashMap_foreach(&sets, SparseSet*, set,
+	({
+		sparseSet_destruct(set);
+		checs_free(set);
+	}));
+	
 	hashMap_destruct(&sets);
 	checs_free(keys);
 	checs_free(setIndices);
