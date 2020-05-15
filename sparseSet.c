@@ -45,7 +45,7 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity)
 
 	if (set->on_entity_registered)
 	{
-		set->on_entity_registered(set, entity);
+		set->on_entity_registered(entity);
 	}
 
 	if (set->component_constructor)

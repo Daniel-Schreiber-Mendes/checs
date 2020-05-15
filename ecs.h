@@ -94,7 +94,7 @@ typedef uint16_t AttributeSignature; //the signature of a AttributeType which de
 typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
-typedef void(*EntityRegisteredCallback)(SparseSet *set, EntityId e);
+typedef void(*EntityRegisteredCallback)(EntityId e);
 
 typedef enum
 {
@@ -127,7 +127,7 @@ typedef struct
 	uintEC* sparse; //sparse packed array of indices to dense array
 	uintEC sparseCapacity; //maximum number of elements
 
-	uintEC* dense; //dense array of entitys
+	EntityId* dense; //dense array of entitys
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
@@ -181,7 +181,7 @@ EntityId  entityManager_entity_get_by_tag(uintEC tag);
 #define   checs_entity_foreach(entity)\
 	for (uintEC entity##i=0, entity=entitys[0]; entity##i < entityCount; entity = entitys[++entity##i])
 /*this will only be called inside a system. 
-The Signature of a callback is always void foo(EntityId *const entitys, uintEC const entityCount);
+The Signature of a callback is void foo(EntityId *entitys, uintEC entityCount);
 this means one doesnt have to give the data as an argument since their name is already know.
 entity is only the alias that is going to be used for the entityId's inside the array. We concatenate the counter variable i with the alias of the entitys to prevent 
 name collision if the loop is used nested*/
@@ -355,8 +355,21 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 		swap(Type, ((Type*)set->components)[set->sparse[e0]], ((Type*)set->components)[set->sparse[e1]]);\
 	}
 
-#define checs_entity_sort(Type, entity, compare)\
-
-
+/*
+#define checs_entity_insert_sort(Type, entity, comparable)\
+	{
+		if (((Type*)set->components)[entity].comparable >= ((Type*)set->components)[set->denseSize - 2].comparable)
+		for (uintEC i=set->denseSize; i < set->denseSize - 1; ++i)
+		{
+			if (((Type*)set->components)[entity].comparable >= ((Type*)set->components)[i].comparable)
+			{
+				if (((Type*)set->components)[entity].comparable < ((Type*)set->components)[i + 1].comparable)
+				{
+					for ()
+				}
+			}
+		}
+	}
+*/
 
 #endif

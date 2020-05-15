@@ -48,6 +48,6 @@ void system_entity_add(System *const sys, EntityId const entity)
 
 void system_entity_remove(System *const sys, EntityId const entity)
 {
-	sys->dense[sys->sparse[entity]] = sys->dense[sys->denseSize--];
-	sys->sparse[entity] = 0;
+	sys->dense[sys->sparse[entity]] = sys->dense[--sys->denseSize];
+	sys->sparse[sys->dense[sys->sparse[entity]]] = sys->dense[sys->sparse[entity]];
 }

@@ -69,7 +69,6 @@ void componentManager_entity_erase(EntityId const entity)
 			sparseSet_entity_remove(hashMap_get(&sets, SparseSet, setIndices[i]), entity);
 		}
 	}
-	keys[entity] = 0;
 }
 
 

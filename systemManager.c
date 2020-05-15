@@ -126,7 +126,7 @@ void systemManager_entity_erase(EntityId const entity)
 	for(uintEC i=0; i < systemCount; ++i)
 	{
 		if(key_match(systems[i].key, keys[entity]))
-		{
+		{			
 			system_entity_remove(&systems[i], entity);
 		}
 	}
