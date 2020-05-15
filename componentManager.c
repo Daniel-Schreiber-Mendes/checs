@@ -44,11 +44,11 @@ void componentManager_terminate(void)
 }
 
 
-void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
+void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const), EntityRegisteredCallback const on_entity_registered)
 {
 	SparseSet *const set = checs_malloc(sizeof(SparseSet));
 	hashMap_insert(&sets, sig, set);
-	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor);
+	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor, on_entity_registered);
 	checs_assert(registeredComponentsCount + 1 <= componentCount);
 	setIndices[registeredComponentsCount++] = sig;
 }

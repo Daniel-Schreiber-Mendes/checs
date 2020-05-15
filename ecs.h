@@ -55,7 +55,7 @@
 	//checks if it is allowed to acces the entity
 	#define checs_entity_assert(Type, entity)\
 		{\
-			EntityId e = entity;\
+			EntityId const e = entity;\
 			checs_assert(e < getSparseSet(Type)->sparseCapacity);\
 			checs_assert(getSparseSet(Type)->sparse[e] < getSparseSet(Type)->denseCapacity);\
 		}
@@ -188,7 +188,7 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
 void 	componentManager_terminate(void);
-void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
+void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*), EntityRegisteredCallback on_entity_registered);
 void	componentManager_entity_register(EntityId entity, ComponentKey key);
 void    componentManager_entity_erase(EntityId entity);
 void    componentManager_entity_components_add(EntityId entity, ComponentKey key);
@@ -196,8 +196,10 @@ void    componentManager_entity_components_add(EntityId entity, ComponentKey key
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))
 
-#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor)\
-	componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
+
+//if one modifys the order of the entitys by e.g sorting them, one cannot keep a pointer to a component elsewhere, because the pointer could potentially point to the wrong component
+#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor, on_entity_registered)\
+	componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor, on_entity_registered);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define checs_component_mut_use(Type, alias) Type *alias
@@ -280,7 +282,7 @@ void    systemManager_task_register(TaskCallback callback, CallType callType);
 	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
-void sparseSet_construct(SparseSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void *const), void(*component_constructor)(void *const));
+void sparseSet_construct(SparseSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*), EntityRegisteredCallback on_entity_registered);
 void sparseSet_destruct(SparseSet const *set);
 void sparseSet_entity_add(SparseSet *set, EntityId entity);
 void sparseSet_entity_remove(SparseSet *set, EntityId entity);
@@ -335,6 +337,26 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 
 #define checs_attribute_entity_foreach(Type, entityAlias)\
 	vector_foreach(getAttributeVec(Type), EntityId, entityAlias)
+
+
+//component sorting algorithms
+#define swap(Type, x, y)\
+	{\
+		Type tmp = x;\
+		x = y;\
+		y = tmp;\
+	}\
+
+#define checs_entitys_swap(Type, e0, e1)\
+	{\
+		SparseSet *set = getSparseSet(Type);\
+		swap(uintEC, set->sparse[e0], set->sparse[e1]);\
+		swap(uintEC, set->dense[set->sparse[e0]], set->dense[set->sparse[e1]]);\
+		swap(Type, ((Type*)set->components)[set->sparse[e0]], ((Type*)set->components)[set->sparse[e1]]);\
+	}
+
+#define checs_entity_sort(Type, entity, compare)\
+
 
 
 #endif
