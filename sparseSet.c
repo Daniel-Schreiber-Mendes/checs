@@ -3,7 +3,7 @@
 
 
 void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint, 
-						 void(*component_destructor)(void *const), void(*component_constructor)(void *const), EntityRegisteredCallback const on_entity_registered)
+						 void(*component_destructor)(void *const), void(*component_constructor)(void *const))
 {
 	*set = (SparseSet)
 	{
@@ -19,7 +19,6 @@ void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKe
 		.componentSize = componentSize,
 		.component_destructor = component_destructor,
 		.component_constructor = component_constructor,
-		.on_entity_registered = on_entity_registered
 	};
 }
 
@@ -42,11 +41,6 @@ void sparseSet_entity_add(SparseSet *const set, EntityId const entity)
 
 	checs_assert(set->denseSize + 1 <= set->denseCapacity);
 	set->dense[set->sparse[entity] = set->denseSize++] = entity;
-
-	if (set->on_entity_registered)
-	{
-		set->on_entity_registered(entity);
-	}
 
 	if (set->component_constructor)
 	{

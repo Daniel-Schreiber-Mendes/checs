@@ -1,7 +1,7 @@
 #include "ecs.h"
 
 
-void system_construct(System *const sys, SystemCallback callback, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
+void system_construct(System *const sys, SystemCallback callback, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint, EntityAddedCallback const on_entity_added)
 {
 	*sys = (System)
 	{
@@ -16,7 +16,8 @@ void system_construct(System *const sys, SystemCallback callback, ComponentKey c
 
 		.key = key,
 		.active = true, 
-		.callback = callback
+		.callback = callback,
+		.on_entity_added = on_entity_added
 	};
 }
 //maxEntitysHint tells the system how many entitys the system will approximately at its peak have. maxEntitysDevnHint stand for 
@@ -43,6 +44,11 @@ void system_entity_add(System *const sys, EntityId const entity)
 		sys->dense = realloc(sys->dense, sizeof(EntityId) * (sys->denseCapacity = entity + sys->maxEntitysDevnHint));
 
 	sys->dense[sys->sparse[entity]] = entity;
+
+	if (sys->on_entity_added)
+	{
+		sys->on_entity_added(entity);
+	}
 }
 
 

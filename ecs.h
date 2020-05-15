@@ -94,7 +94,7 @@ typedef uint16_t AttributeSignature; //the signature of a AttributeType which de
 typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
-typedef void(*EntityRegisteredCallback)(EntityId e);
+typedef void(*EntityAddedCallback)(EntityId e);
 
 typedef enum
 {
@@ -118,7 +118,6 @@ struct SparseSet
 	size_t componentSize; //size of component
 	void(*component_destructor)(void*);
 	void(*component_constructor)(void*);
-	EntityRegisteredCallback on_entity_registered;
 };
 
 
@@ -136,6 +135,7 @@ typedef struct
 	bool active;
 	SystemCallback callback;	
 	ComponentKey key; //key shows which components at least an entity has to have to be processed by this system
+	EntityAddedCallback on_entity_added;
 }
 System;
 /*it is perfectly legal to create or erase an entity inside a system call. but there is no guarantee that the entity will be 
@@ -176,7 +176,24 @@ void      entitymanager_entity_tag_add(EntityId entity, uintEC tag);
 EntityId  entityManager_entity_get_by_tag(uintEC tag);
 
 #define   checs_entity_generate(...)\
-	({  _entityManager_entity_generate(components_convertToKey(__VA_ARGS__)); })
+	({\
+		ComponentKey const key = components_convertToKey(__VA_ARGS__);\
+		EntityId const e = _entityManager_entity_generate(key); \
+		systemManager_entity_register(e, key);\
+		e;\
+	})
+
+
+//can be used to manipulate the entity and its components before it gets registered by systems. this can be useful if you want to for example sort a newly added 
+//entity in a system based on an value that has to be known before the EntityRegisteredCallback callback gets called
+#define   checs_entity_generate_in_place(entityAlias, expr, ...)\
+	({\
+		ComponentKey const key = components_convertToKey(__VA_ARGS__);\
+		EntityId const entityAlias = _entityManager_entity_generate(key); \
+		(expr);\
+		systemManager_entity_register(entityAlias, key);\
+		entityAlias;\
+	})
 
 #define   checs_entity_foreach(entity)\
 	for (uintEC entity##i=0, entity=entitys[0]; entity##i < entityCount; entity = entitys[++entity##i])
@@ -188,7 +205,7 @@ name collision if the loop is used nested*/
 
 void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
 void 	componentManager_terminate(void);
-void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*), EntityRegisteredCallback on_entity_registered);
+void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
 void	componentManager_entity_register(EntityId entity, ComponentKey key);
 void    componentManager_entity_erase(EntityId entity);
 void    componentManager_entity_components_add(EntityId entity, ComponentKey key);
@@ -198,8 +215,8 @@ void    componentManager_entity_components_add(EntityId entity, ComponentKey key
 
 
 //if one modifys the order of the entitys by e.g sorting them, one cannot keep a pointer to a component elsewhere, because the pointer could potentially point to the wrong component
-#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor, on_entity_registered)\
-	componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor, on_entity_registered);
+#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor)\
+	componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
 
 /*@alias is the alias that is going to be used for the component, like for example pos, or vel*/
 #define checs_component_mut_use(Type, alias) Type *alias
@@ -270,7 +287,7 @@ required one. This makes iterating pretty fast.*/
 void    systemManager_init(uintST n_systemUpdateCount, uintST systemDrawCount, 
 						uintST n_taskUpdateCount, uintST taskDrawCount);
 void    systemManager_terminate(void);
-void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint);
+void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint, EntityAddedCallback on_entity_added);
 void    systemManager_update(void);
 void 	systemManager_draw(void);
 void    systemManager_entity_register(EntityId entity, ComponentKey key);
@@ -278,17 +295,17 @@ void    systemManager_entity_erase(EntityId entity);
 void    systemManager_task_register(TaskCallback callback, CallType callType);
 
 
-#define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
-	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
+#define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, on_entity_added, ...)\
+	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint, on_entity_added);
 
 
-void sparseSet_construct(SparseSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*), EntityRegisteredCallback on_entity_registered);
+void sparseSet_construct(SparseSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
 void sparseSet_destruct(SparseSet const *set);
 void sparseSet_entity_add(SparseSet *set, EntityId entity);
 void sparseSet_entity_remove(SparseSet *set, EntityId entity);
 
 
-void system_construct(System *sys, SystemCallback callback, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint);
+void system_construct(System *sys, SystemCallback callback, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint, EntityAddedCallback on_entity_added);
 void system_destruct(System const *sys);
 void system_entity_add(System *sys, EntityId entity);
 void system_entity_remove(System *sys, EntityId entity);

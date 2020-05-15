@@ -28,7 +28,6 @@ EntityId _entityManager_entity_generate(ComponentKey const key)
 {
 	checs_assert(key != 0);
 	EntityId entity = stack_empty(&unusedEntitys) ? nextEntityId++ : stack_pop(&unusedEntitys, EntityId);
-	systemManager_entity_register(entity, key);
 	componentManager_entity_register(entity, key);
 	return entity;
 }

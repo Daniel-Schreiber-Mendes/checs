@@ -57,9 +57,9 @@ void systemManager_terminate(void)
 }
 
 
-void systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint)
+void systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint, EntityAddedCallback const on_entity_added)
 {
-	system_construct(&systems[systemTypeCounts[callType]++], callback, key, maxEntitysHint, maxEntitysDevnHint);
+	system_construct(&systems[systemTypeCounts[callType]++], callback, key, maxEntitysHint, maxEntitysDevnHint, on_entity_added);
 }
 //the system array consists of two parts. the first part is made of systems, that are called on update, 
 //and the second part are systems that are called on draw. How big each part is, is defined in systemUpdateCount
