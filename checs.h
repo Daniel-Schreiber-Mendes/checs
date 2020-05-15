@@ -29,6 +29,8 @@
 
 #define checs_task_register(callback, callType) systemManager_task_register(callback, callType)
 
+
+#define checs_entity_erase(entity) entityManager_entity_erase(entity)
 #define checs_entity_tag_add(entity, tag) entityManager_entity_tag_add(entity, tag)
 #define checs_entity_get_by_tag(tag) entityManager_entity_get_by_tag(tag)
 

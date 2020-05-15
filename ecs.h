@@ -76,7 +76,7 @@
 //when we shift the number 1 three to the right, we get 0000 0100. Now we or the current key(because we have multiple signatures
 //that we want to set) we get the appropriate componentKey
 
-
+typedef struct SparseSet SparseSet;
 typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated. this is a key which corresponds to an entity
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
 typedef uint16_t ComponentId; //unique identifier for a instanciated component
@@ -91,9 +91,10 @@ typedef uint8_t uintC; //stores any number that goes from 0 to the maximum numbe
 typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
 typedef uint8_t uintA; //stores any number that goes from 0 to the maximum number of attributes
 typedef uint16_t AttributeSignature; //the signature of a AttributeType which depends on the order of registering this is the hashed value of the name of the attribute
-typedef void(*SystemCallback)(EntityId *const entitys, uintEC const size);
+typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
+typedef void(*EntityRegisteredCallback)(SparseSet *set, EntityId e);
 
 typedef enum
 {
@@ -103,7 +104,7 @@ typedef enum
 CallType; //specifies when the system/task is called
 
 
-typedef struct
+struct SparseSet
 {
 	uintEC* sparse; //sparse packed array of indices to dense array
 	uintEC sparseCapacity; //maximum number of elements
@@ -115,10 +116,10 @@ typedef struct
 	void* components;
 	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
-	void(*component_destructor)(void *const);
-	void(*component_constructor)(void *const);
-}
-SparseSet;
+	void(*component_destructor)(void*);
+	void(*component_constructor)(void*);
+	EntityRegisteredCallback on_entity_registered;
+};
 
 
 typedef struct
@@ -167,12 +168,12 @@ extern uint8_t *eventCapacitys;
 extern HashMap attributes;
 
 
-void      entityManager_init(uintEC const tag_count);
+void      entityManager_init(uintEC tag_count);
 void 	  entityManager_terminate(void);
-EntityId _entityManager_entity_generate(ComponentKey const key);
-void      entityManager_entity_erase(EntityId const e);
-void      entitymanager_entity_tag_add(EntityId const entity, uintEC const tag);
-EntityId  entityManager_entity_get_by_tag(uintEC const tag);
+EntityId _entityManager_entity_generate(ComponentKey key);
+void      entityManager_entity_erase(EntityId e);
+void      entitymanager_entity_tag_add(EntityId entity, uintEC tag);
+EntityId  entityManager_entity_get_by_tag(uintEC tag);
 
 #define   checs_entity_generate(...)\
 	({  _entityManager_entity_generate(components_convertToKey(__VA_ARGS__)); })
@@ -185,12 +186,12 @@ this means one doesnt have to give the data as an argument since their name is a
 entity is only the alias that is going to be used for the entityId's inside the array. We concatenate the counter variable i with the alias of the entitys to prevent 
 name collision if the loop is used nested*/
 
-void 	componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint);
+void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
 void 	componentManager_terminate(void);
-void    componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const));
-void	componentManager_entity_register(EntityId const entity, ComponentKey const key);
-void    componentManager_entity_erase(EntityId const entity);
-void    componentManager_entity_components_add(EntityId const entity, ComponentKey const key);
+void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
+void	componentManager_entity_register(EntityId entity, ComponentKey key);
+void    componentManager_entity_erase(EntityId entity);
+void    componentManager_entity_components_add(EntityId entity, ComponentKey key);
 
 //macro to make the code shorter and more expressive
 #define getSparseSet(Type) hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))
@@ -264,41 +265,41 @@ required one. This makes iterating pretty fast.*/
 	})
 
 
-void    systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
-						uintST const n_taskUpdateCount, uintST const taskDrawCount);
+void    systemManager_init(uintST n_systemUpdateCount, uintST systemDrawCount, 
+						uintST n_taskUpdateCount, uintST taskDrawCount);
 void    systemManager_terminate(void);
-void    systemManager_system_register(SystemCallback callback, CallType const callType, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
+void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint);
 void    systemManager_update(void);
 void 	systemManager_draw(void);
-void    systemManager_entity_register(EntityId const entity, ComponentKey const key);
-void    systemManager_entity_erase(EntityId const entity);
-void    systemManager_task_register(TaskCallback const callback, CallType const callType);
+void    systemManager_entity_register(EntityId entity, ComponentKey key);
+void    systemManager_entity_erase(EntityId entity);
+void    systemManager_task_register(TaskCallback callback, CallType callType);
 
 
 #define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, ...)\
 	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint);
 
 
-void sparseSet_construct(SparseSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsDevnHint, void(*component_destructor)(void *const), void(*component_constructor)(void *const));
-void sparseSet_destruct(SparseSet const *const set);
-void sparseSet_entity_add(SparseSet *const set, EntityId const entity);
-void sparseSet_entity_remove(SparseSet *const set, EntityId const entity);
+void sparseSet_construct(SparseSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void *const), void(*component_constructor)(void *const));
+void sparseSet_destruct(SparseSet const *set);
+void sparseSet_entity_add(SparseSet *set, EntityId entity);
+void sparseSet_entity_remove(SparseSet *set, EntityId entity);
 
 
-void system_construct(System *const sys, SystemCallback callback, ComponentKey const key, uintEC const maxEntitysHint, uintEC const maxEntitysDevnHint);
-void system_destruct(System const *const sys);
-void system_entity_add(System *const sys, EntityId const entity);
-void system_entity_remove(System *const sys, EntityId const entity);
+void system_construct(System *sys, SystemCallback callback, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint);
+void system_destruct(System const *sys);
+void system_entity_add(System *sys, EntityId entity);
+void system_entity_remove(System *sys, EntityId entity);
 
 
 /*altough callbacks are faster than events one should use them sparsly because they contradict the idea of grouping
 logic together */
-void    commandManager_init(uintC const n_signatureCount);
+void    commandManager_init(uintC n_signatureCount);
 void 	commandManager_terminate(void);
-void    commandManager_command_publish(CommandSignature const signature, void* data);
+void    commandManager_command_publish(CommandSignature signature, void* data);
 /* because only void* are passed this is much faster than passing each element by value*/
-void    commandManager_command_subscribe(CommandSignature const signature, CommandCallback callback);
-void 	eventManager_init(uintE const n_signatureCount);
+void    commandManager_command_subscribe(CommandSignature signature, CommandCallback callback);
+void 	eventManager_init(uintE n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
 
@@ -319,10 +320,10 @@ void    eventManager_buffers_swap(void);
 	events_db[1 - db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
 	eventCapacitys[signature] = maxEventsHint;
 
-
-void attributeManager_init(uintA const maxAttributesHint);
+//the name of the attribute does not have to be an acutal type, one only needs a name
+void attributeManager_init(uintA maxAttributesHint);
 void attributeManager_terminate(void);
-void _attributeManager_attribute_register(AttributeSignature const sig, uintA const attributeCount);
+void _attributeManager_attribute_register(AttributeSignature sig, uintA attributeCount);
 
 #define getAttributeVec(Type) hashMap_get(&attributes, Vector, hashMap_hash(&attributes, Type))
 
