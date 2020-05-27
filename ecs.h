@@ -55,9 +55,9 @@
 	//checks if it is allowed to acces the entity
 	#define checs_entity_assert(Type, entity)\
 		{\
-			EntityId const e = entity;\
-			checs_assert(e < getSparseSet(Type)->sparseCapacity);\
-			checs_assert(getSparseSet(Type)->sparse[e] < getSparseSet(Type)->denseCapacity);\
+			EntityId const Type##e = entity;\
+			checs_assert(Type##e < getSparseSet(Type)->sparseCapacity);\
+			checs_assert(getSparseSet(Type)->sparse[Type##e] < getSparseSet(Type)->denseCapacity);\
 		}
 #else
 	#define checs_assert(expr) (void)0
@@ -94,7 +94,7 @@ typedef uint16_t AttributeSignature; //the signature of a AttributeType which de
 typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
-typedef void(*EntityAddedCallback)(EntityId e);
+typedef void(*EntityAddedCallback)(EntityId);
 
 typedef enum
 {
