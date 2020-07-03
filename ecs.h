@@ -2,6 +2,7 @@
 #define ECS_H
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/variadic/to_seq.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <checl/containers.h>
 #include <stdlib.h>
 
@@ -79,7 +80,7 @@
 typedef struct SparseSet SparseSet;
 typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated. this is a key which corresponds to an entity
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
-typedef uint16_t ComponentId; //unique identifier for a instanciated component
+typedef uint16_t ComponentId; //unique identifier for a component
 typedef uint16_t uintEC; //any number that stores values that goes from 0 to the maximum value EntityId can hold
 typedef uint8_t uintST; //any number that goes from 0 to the maximum number of systems/tasks
 typedef uint16_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
@@ -150,6 +151,13 @@ typedef struct
 Task;
 
 
+typedef struct
+{
+	ComponentKey key;
+}
+Template;
+
+
 /*TODO:  
  -creating a seperate memory pool for the values that are passed to the commands
  */
@@ -158,7 +166,7 @@ Task;
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 #define key_set(key, index) (key |= 1 << index)
 
-/*yeah global variables are bad but in this case calling a getter function everytime would be a big performance hit*/
+
 extern HashMap sets; /*in componentManager*/
 extern ComponentKey* keys; /*in componentManager*/
 extern void **events_db[2];
@@ -270,11 +278,10 @@ required one. This makes iterating pretty fast.*/
 
 
 #define key_evaluate(r, key, Type)\
-	*(key) |= 1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki;
+		*(key) |= 1 << hashMap_get(&sets, SparseSet, hashMap_hash(&sets, Type))->cki;\
 	/*@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
 	given as parameter
-	before we begin the shifting we first have to get the signature of the component by concatenating it. not with ## but with cat 
-	because this has to be done when it is a element of a BOOST_PP_SEQUENCE*/
+	before we begin the shifting we first have to get the signature of the component */
 
 #define components_convertToKey(...)\
 	({\
@@ -388,5 +395,11 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 		}
 	}
 */
+
+
+#define template_construct(t, ...)\
+	(t)->key = components_convertToKey(__VA_ARGS__)\
+
+
 
 #endif
