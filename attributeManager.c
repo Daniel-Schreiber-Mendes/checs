@@ -12,7 +12,7 @@ void attributeManager_init(uintA const maxAttributesHint)
 
 void _attributeManager_attribute_register(AttributeSignature const sig, uintA const attributeCount)
 {
-	Vector *vec = malloc(sizeof(Vector));
+	Vector *vec = checs_malloc(sizeof(Vector));
 	vector_construct(vec, sizeof(EntityId));
 	vector_reserve(vec, attributeCount);
 	hashMap_insert(&attributes, sig, vec);

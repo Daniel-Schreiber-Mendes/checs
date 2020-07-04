@@ -34,11 +34,7 @@
 #define checs_entity_tag_add(entity, tag) entityManager_entity_tag_add(entity, tag)
 #define checs_entity_get_by_tag(tag) entityManager_entity_get_by_tag(tag)
 
-
-#define checs_command_subscribe(signature, callback) commandManager_command_subscribe(signature, callback)
-#define checs_command_publish(signature, data) commandManager_command_publish(signature, (data))
 #define checs_command_parameters void *const data
-/* this need to be inside the function head */
 
 #define checs_eventBuffers_swap() eventManager_buffers_swap()
 

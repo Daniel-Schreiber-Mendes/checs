@@ -153,6 +153,14 @@ Task;
 
 typedef struct
 {
+	uint8_t size, cap;
+	CommandCallback callbacks[];
+}
+Command;
+
+
+typedef struct
+{
 	ComponentKey key;
 }
 Template;
@@ -169,6 +177,7 @@ Template;
 
 extern HashMap sets; /*in componentManager*/
 extern ComponentKey* keys; /*in componentManager*/
+extern HashMap commands;
 extern void **events_db[2];
 extern uint8_t *eventCounts_db[2];
 extern uint8_t db_index; 
@@ -318,16 +327,26 @@ void system_entity_add(System *sys, EntityId entity);
 void system_entity_remove(System *sys, EntityId entity);
 
 
-/*altough callbacks are faster than events one should use them sparsly because they contradict the idea of grouping
-logic together */
-void    commandManager_init(uintC n_signatureCount);
+void    commandManager_init(uintC commandCount);
 void 	commandManager_terminate(void);
-void    commandManager_command_publish(CommandSignature signature, void* data);
-/* because only void* are passed this is much faster than passing each element by value*/
-void    commandManager_command_subscribe(CommandSignature signature, CommandCallback callback);
+void    commandManager_command_register(CommandSignature sig, uintC callbackCount);
+void    commandManager_command_publish(CommandSignature sig, void* data); /* because only void* are passed this is much faster than passing each element by value*/
+void    commandManager_command_subscribe(CommandSignature sig, CommandCallback callback);
+
+#define checs_command_register(Type, callbackCount)\
+	commandManager_command_register(hashMap_hash(&commands, Type), callbackCount);
+
+#define checs_command_publish(Type, data)\
+	commandManager_command_publish(hashMap_hash(&commands, Type), data);
+
+#define checs_command_subscribe(Type, callback)\
+	commandManager_command_subscribe(hashMap_hash(&commands, Type), callback);
+
+
 void 	eventManager_init(uintE n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
+
 
 #define checs_events_poll(EventDataType, signature, alias)\
 	for (EventDataType* alias = &((EventDataType*)events_db[1 - db_index][signature])[eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = &((EventDataType*)events_db[1 - db_index][signature])[--eventCounts_db[1 - db_index][signature]])
