@@ -9,43 +9,43 @@
 //systems remove the events is also a bad idea because how does one system know, if every system that needed the events had already
 //polled them? and this is also extremely bad for concurrency. a double buffer solves this. the capacitys array is the same for both
 //buffers because they should always have the same size, only the content should differ.
-//double buffered event queue
-//db stands for double buffer
-void **events_db[2];
-uint8_t *eventCounts_db[2]; //number of current events in each event queue
-uint8_t db_index = 0; 
-uint8_t *eventCapacitys; //number of maximum events in each eventqueue
 static uintE signatureCount;
+static EventQueue eq0, eq1;
+HashMap eventSignatures; //pointer to actual events in the eventqueue's
+EventQueue *hidden = &eq0;
+EventQueue *exposed = &eq1;
+uint8_t *eventCapacitys; //number of maximum events in each eventqueue
 
 void eventManager_init(uintE const n_signatureCount)
 {
-	for (uint8_t i=0; i < 2; ++i)
-	{
-		events_db[i] = checs_malloc(sizeof(void**) * (signatureCount = n_signatureCount));
-		eventCounts_db[i] = checs_calloc(signatureCount, sizeof(uint8_t));
-	}
-	eventCapacitys = checs_malloc(sizeof(uint8_t) * signatureCount);
+	eventCapacitys = checs_malloc(sizeof(uint8_t) * (signatureCount = n_signatureCount));
+
+	hashMap_construct(&eventSignatures, signatureCount);
+	eq0.events = checs_malloc(sizeof(void**) * signatureCount);
+	eq0.sizes = checs_calloc(signatureCount, 1);
+	eq1.events = checs_malloc(sizeof(void**) * signatureCount);
+	eq1.sizes = checs_calloc(signatureCount, 1);
 }
 
 
 void eventManager_terminate(void)
 {
-	checs_free(eventCapacitys);
-	for (uint8_t i=0; i < 2; ++i)
-	{
-		for (uintE j=0; j < signatureCount; ++j)
-		{
-			checs_free(events_db[i][j]);
-		}
-		checs_free(events_db[i]);
-		checs_free(eventCounts_db[i]);
-	}
+	checs_free(eq0.events);
+	checs_free(eq0.sizes);
+	checs_free(eq1.events);
+	checs_free(eq1.sizes);
 }
 
 
-	//swapping the buffers and then clearing the one that is now not going to be used
+//swapping the buffers and then clearing the one that is not going to be polled from the next frame
 void eventManager_buffers_swap(void)
 {
-	db_index = 1 - db_index;
-	memset(eventCounts_db[db_index], 0, sizeof(uint8_t) * signatureCount);
+	swap(EventQueue*, hidden, exposed)
+	memset(exposed->sizes, 0, signatureCount);
+}
+
+
+void eventManager_event_register(EventSignature sig)
+{
+	hashMap_insert(&eventSignatures, sig, signatureCount++);
 }

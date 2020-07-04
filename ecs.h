@@ -86,7 +86,6 @@ typedef uint8_t uintST; //any number that goes from 0 to the maximum number of s
 typedef uint16_t ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
 typedef uint8_t ComponentKeyIndex; //this is the place of the bit that indicates that an entity has this component
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
-typedef uint8_t EventSignature; 
 typedef uint8_t CommandSignature;
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
 typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
@@ -161,6 +160,14 @@ Command;
 
 typedef struct
 {
+	void **events;
+	uint8_t *sizes;
+}
+EventQueue;
+
+
+typedef struct
+{
 	ComponentKey key;
 }
 Template;
@@ -175,14 +182,6 @@ Template;
 #define key_set(key, index) (key |= 1 << index)
 
 
-extern HashMap sets; /*in componentManager*/
-extern ComponentKey* keys; /*in componentManager*/
-extern HashMap commands;
-extern void **events_db[2];
-extern uint8_t *eventCounts_db[2];
-extern uint8_t db_index; 
-extern uint8_t *eventCapacitys;
-extern HashMap attributes;
 
 
 void      entityManager_init(uintEC tag_count);
@@ -219,6 +218,9 @@ The Signature of a callback is void foo(EntityId *entitys, uintEC entityCount);
 this means one doesnt have to give the data as an argument since their name is already know.
 entity is only the alias that is going to be used for the entityId's inside the array. We concatenate the counter variable i with the alias of the entitys to prevent 
 name collision if the loop is used nested*/
+
+extern HashMap sets; /*in componentManager*/
+extern ComponentKey* keys; /*in componentManager*/
 
 void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
 void 	componentManager_terminate(void);
@@ -326,6 +328,7 @@ void system_destruct(System const *sys);
 void system_entity_add(System *sys, EntityId entity);
 void system_entity_remove(System *sys, EntityId entity);
 
+extern HashMap commands;
 
 void    commandManager_init(uintC commandCount);
 void 	commandManager_terminate(void);
@@ -346,26 +349,32 @@ void    commandManager_command_subscribe(CommandSignature sig, CommandCallback c
 void 	eventManager_init(uintE n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
+void 	eventManager_event_register(EventSignature sig);
+
+extern HashMap eventSignatures; //eventidices inside 
+extern EventQueue *hidden;
+extern EventQueue *exposed;
+extern uint8_t *eventCapacitys;
+
+#define getEventSig(Type) ((uint8_t)hashMap_get(&eventSignatures, void, hashMap_hash(&eventSignatures, Type)))
+
+#define checs_events_poll(Type, alias)\
+	for (Type *alias = &((Type*)exposed->events[getEventSig(Type)])[exposed->sizes[getEventSig(Type)] - 1]; exposed->sizes[getEventSig(Type)]; alias = &((Type*)exposed->events[getEventSig(Type)])[--exposed->sizes[getEventSig(Type)]])
+
+#define checs_event_publish(Type, data)\
+	if (hidden->sizes[getEventSig(Type)] == eventCapacitys[getEventSig(Type)])\
+		hidden->events[getEventSig(Type)] = realloc(hidden->events[getEventSig(Type)], (eventCapacitys[getEventSig(Type)] *= 2) * sizeof(Type));\
+	memcpy(&((Type*)hidden->events)[hidden->sizes[getEventSig(Type)]++], &data, sizeof(Type));
+
+#define checs_event_register(Type, maxEventsHint)\
+	eventManager_event_register(hashMap_hash(&eventSignatures, Type));\
+	hidden->events[getEventSig(Type)] = checs_malloc(sizeof(Type) * maxEventsHint);\
+	exposed->events[getEventSig(Type)] = checs_malloc(sizeof(Type) * maxEventsHint);\
+	eventCapacitys[getEventSig(Type)] = maxEventsHint;
 
 
-#define checs_events_poll(EventDataType, signature, alias)\
-	for (EventDataType* alias = &((EventDataType*)events_db[1 - db_index][signature])[eventCounts_db[1 - db_index][signature] - 1]; eventCounts_db[1 - db_index][signature]; alias = &((EventDataType*)events_db[1 - db_index][signature])[--eventCounts_db[1 - db_index][signature]])
-
-
-#define checs_event_publish(EventDataType, signature, data)\
-	if (eventCounts_db[db_index][signature] == eventCapacitys[signature])\
-	{\
-		events_db[db_index][signature] = realloc(events_db[db_index][signature], (eventCapacitys[signature] *= 2) * sizeof(EventDataType));\
-	}\
-	memcpy(&((EventDataType*)events_db[db_index][signature])[eventCounts_db[db_index][signature]++], &data, sizeof(EventDataType));
-
-
-#define checs_event_register(EventDataType, signature, maxEventsHint)\
-	events_db[db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
-	events_db[1 - db_index][signature] = checs_malloc(sizeof(EventDataType) * maxEventsHint);\
-	eventCapacitys[signature] = maxEventsHint;
-
-//the name of the attribute does not have to be an acutal type, one only needs a name
+extern HashMap attributes;
+//the name of the attribute must not be an acutal type, one only needs a name
 void attributeManager_init(uintA maxAttributesHint);
 void attributeManager_terminate(void);
 void _attributeManager_attribute_register(AttributeSignature sig, uintA attributeCount);
