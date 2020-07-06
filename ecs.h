@@ -123,14 +123,7 @@ ComponentSet;
 
 typedef struct
 {
-	uintEC* sparse; //sparse packed array of indices to dense array
-	uintEC sparseCapacity; //maximum number of elements
-
-	EntityId* dense; //dense array of entitys
-	uintEC denseCapacity; //maximum number of elements
-	uintEC denseSize; //current number of elements;
-
-	uintEC maxEntitysDevnHint;
+	SparseSet sparseSet;
 
 	bool active;
 	SystemCallback callback;	
@@ -305,7 +298,7 @@ required one. This makes iterating pretty fast.*/
 void    systemManager_init(uintST n_systemUpdateCount, uintST systemDrawCount, 
 						uintST n_taskUpdateCount, uintST taskDrawCount);
 void    systemManager_terminate(void);
-void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint, EntityAddedCallback on_entity_added);
+void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, EntityAddedCallback on_entity_added);
 void    systemManager_update(void);
 void 	systemManager_draw(void);
 void    systemManager_entity_register(EntityId entity, ComponentKey key);
@@ -313,17 +306,17 @@ void    systemManager_entity_erase(EntityId entity);
 void    systemManager_task_register(TaskCallback callback, CallType callType);
 
 
-#define checs_system_register(callback, CallType, maxEntitysHint, maxEntitysDevnHint, on_entity_added, ...)\
-	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, maxEntitysDevnHint, on_entity_added);
+#define checs_system_register(callback, CallType, maxEntitysHint, on_entity_added, ...)\
+	systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, on_entity_added);
 
 
-void componentSet_construct(ComponentSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
-void componentSet_destruct(ComponentSet const *set);
+void componentSet_construct(ComponentSet* set, size_t componentSize, ComponentKeyIndex cki,  uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
+void componentSet_destruct(ComponentSet *set);
 void componentSet_entity_add(ComponentSet *set, EntityId entity);
 void componentSet_entity_remove(ComponentSet *set, EntityId entity);
 
 
-void system_construct(System *sys, SystemCallback callback, ComponentKey key, uintEC maxEntitysHint, uintEC maxEntitysDevnHint, EntityAddedCallback on_entity_added);
+void system_construct(System *sys, SystemCallback callback, ComponentKey key, uintEC maxEntitysHint, EntityAddedCallback on_entity_added);
 void system_destruct(System const *sys);
 void system_entity_add(System *sys, EntityId entity);
 void system_entity_remove(System *sys, EntityId entity);

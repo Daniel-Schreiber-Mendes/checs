@@ -24,26 +24,23 @@ void eventManager_init(uintE const n_signatureCount)
 	eq0.sizes = checs_calloc(signatureCount, 1);
 	eq1.events = checs_malloc(sizeof(void**) * signatureCount);
 	eq1.sizes = checs_calloc(signatureCount, 1);
-
-	printf("%p\n", eq0.events);
 }
 
 
 void eventManager_terminate(void)
-{
+{/*
 	for (uintE i=0; i < signatureCount; ++i)
 	{
-		//checs_free(exposed->events[i]);
-		//checs_free(hidden->events[i]);
+		checs_free(exposed->events[i]);
+		checs_free(hidden->events[i]);
 	}	
-	printf("%p\n", eq0.events);
 	checs_free(eq0.events);
-	//checs_free(eq0.sizes);
-	printf("%p\n", eq1.events);
-	 checs_free(eq1.events);
-	//checs_free(eq1.sizes);
-	//checs_free(eventCapacitys);
-	//hashMap_destruct(&eventSignatures);
+	checs_free(eq0.sizes);
+	checs_free(eq1.events);
+	checs_free(eq1.sizes);
+	checs_free(eventCapacitys);
+	hashMap_destruct(&eventSignatures);*/ 
+//crashes if i want to free the memory, needs to be fixed
 }
 
 
