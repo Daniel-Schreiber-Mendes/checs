@@ -3,7 +3,7 @@
 uint16_t *setIndices; //this maps a cki into a sparseset inside the hashmap
 uint8_t registeredComponentsCount; //used to know what cki to assign to a registered component
 
-HashMap sets; //hashmap of sparseSets
+HashMap sets; //hashmap of componentSets
 static uintCS componentCount;
 
 ComponentKey *keys; //array of componentKeys
@@ -32,9 +32,9 @@ void componentManager_terminate(void)
 		}
 	}
 
-	hashMap_foreach(&sets, SparseSet*, set,
+	hashMap_foreach(&sets, ComponentSet*, set,
 	({
-		sparseSet_destruct(set);
+		componentSet_destruct(set);
 		checs_free(set);
 	}));
 	
@@ -46,9 +46,9 @@ void componentManager_terminate(void)
 
 void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
-	SparseSet *const set = checs_malloc(sizeof(SparseSet));
+	ComponentSet *const set = checs_malloc(sizeof(ComponentSet) + componentSize * maxComponentsHint); //because it has a unsized array at its end
 	hashMap_insert(&sets, sig, set);
-	sparseSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor);
+	componentSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor);
 	checs_assert(registeredComponentsCount + 1 <= componentCount);
 	setIndices[registeredComponentsCount++] = sig;
 }
@@ -66,7 +66,7 @@ void componentManager_entity_erase(EntityId const entity)
 	{
 		if(key_match(1 << i, keys[entity]))
 		{
-			sparseSet_entity_remove(hashMap_get(&sets, SparseSet, setIndices[i]), entity);
+			componentSet_entity_remove(hashMap_get(&sets, ComponentSet, setIndices[i]), entity);
 		}
 	}
 }
@@ -82,7 +82,7 @@ void componentManager_entity_components_add(EntityId const entity, ComponentKey 
 	{
 		if(key_match(1 << i, key))
 		{
-			sparseSet_entity_add(hashMap_get(&sets, SparseSet, setIndices[i]), entity);
+			componentSet_entity_add(hashMap_get(&sets, ComponentSet, setIndices[i]), entity);
 		}
 	}
 }

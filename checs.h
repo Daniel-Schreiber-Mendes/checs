@@ -2,7 +2,7 @@
 #define CHECS_H
 #include "ecs.h"
 
-/*no functionality is allowed here. Only redefinitions and grouping of functions */
+/*no functionality is allowed here. Only renaming and grouping of functions */
 
 #define checs_terminate()\
 	entityManager_terminate();\
@@ -26,9 +26,7 @@
 #define checs_update() systemManager_update()
 #define checs_draw() systemManager_draw()
 
-
 #define checs_task_register(callback, callType) systemManager_task_register(callback, callType)
-
 
 #define checs_entity_erase(entity) entityManager_entity_erase(entity)
 #define checs_entity_tag_add(entity, tag) entityManager_entity_tag_add(entity, tag)

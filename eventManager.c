@@ -14,26 +14,36 @@ static EventQueue eq0, eq1;
 HashMap eventSignatures; //pointer to actual events in the eventqueue's
 EventQueue *hidden = &eq0;
 EventQueue *exposed = &eq1;
-uint8_t *eventCapacitys; //number of maximum events in each eventqueue
-
+uintE *eventCapacitys; //number of maximum events in each eventqueue
+ 
 void eventManager_init(uintE const n_signatureCount)
 {
-	eventCapacitys = checs_malloc(sizeof(uint8_t) * (signatureCount = n_signatureCount));
-
-	hashMap_construct(&eventSignatures, signatureCount);
+	hashMap_construct(&eventSignatures, (signatureCount = n_signatureCount));
+	eventCapacitys = checs_malloc(signatureCount);
 	eq0.events = checs_malloc(sizeof(void**) * signatureCount);
 	eq0.sizes = checs_calloc(signatureCount, 1);
 	eq1.events = checs_malloc(sizeof(void**) * signatureCount);
 	eq1.sizes = checs_calloc(signatureCount, 1);
+
+	printf("%p\n", eq0.events);
 }
 
 
 void eventManager_terminate(void)
 {
+	for (uintE i=0; i < signatureCount; ++i)
+	{
+		//checs_free(exposed->events[i]);
+		//checs_free(hidden->events[i]);
+	}	
+	printf("%p\n", eq0.events);
 	checs_free(eq0.events);
-	checs_free(eq0.sizes);
-	checs_free(eq1.events);
-	checs_free(eq1.sizes);
+	//checs_free(eq0.sizes);
+	printf("%p\n", eq1.events);
+	 checs_free(eq1.events);
+	//checs_free(eq1.sizes);
+	//checs_free(eventCapacitys);
+	//hashMap_destruct(&eventSignatures);
 }
 
 

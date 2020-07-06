@@ -1,7 +1,7 @@
-SRC = attributeManager.c entityManager.c system.c commandManager.c eventManager.c systemManager.c componentManager.c sparseSet.c
+SRC = attributeManager.c entityManager.c system.c commandManager.c eventManager.c systemManager.c componentManager.c componentSet.c
 OBJ = $(SRC:.c=.o)
 LFLAGS = -shared -o
-CFLAGS = -c -g -fpic -std=c99 -O1
+CFLAGS = -c -g -fpic -std=c99 -O0
 
 make: $(OBJ)
 	gcc $(LFLAGS) libchecs.so $(OBJ) -lchecl
