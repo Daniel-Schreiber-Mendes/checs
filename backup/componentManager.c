@@ -46,7 +46,7 @@ void componentManager_terminate(void)
 
 void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
-	ComponentSet *const set = checs_malloc(sizeof(ComponentSet) + componentSize * maxComponentsHint);
+	ComponentSet *const set = checs_malloc(sizeof(ComponentSet));
 	hashMap_insert(&sets, sig, set);
 	componentSet_construct(set, componentSize, registeredComponentsCount, maxComponentsHint, component_destructor, component_constructor);
 	checs_assert(registeredComponentsCount + 1 <= componentCount);

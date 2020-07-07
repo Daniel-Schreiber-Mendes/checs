@@ -27,7 +27,6 @@ void componentSet_destruct(ComponentSet *const set)
 	checs_assert(set);
 	checs_free(set->dense);
 	checs_free(set->sparse);
-	checs_free(set->components);
 }
 
 
@@ -60,7 +59,7 @@ void componentSet_entity_remove(ComponentSet *const set, EntityId const entity)
 	{
 		set->component_destructor(set->components + set->sparse[entity] * set->componentSize);
 	}
-	if(set->sparse[entity] < set->denseSize - 1) //this needs to be checked because if it evaluates to false that means the entity to be removed is the last one
+	if(set->sparse[entity] < set->denseSize - 1) //this needs to be checked because if it evaluates to false that means the entity to be removed
 	{
 		memcpy(set->components + set->sparse[entity] * set->componentSize, set->components + set->denseSize * set->componentSize, set->componentSize); 
 		set->dense[set->sparse[entity]] = set->dense[set->denseSize];
