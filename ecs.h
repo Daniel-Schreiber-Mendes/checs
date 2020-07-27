@@ -54,16 +54,32 @@
 			exit(-1);\
 		}
 
+	#define checs_assert_message(expr, message)\
+		if (!(expr))\
+		{\
+			printf("%s\n", message);\
+			exit(-1);\
+		}
+
 	//checks if it is allowed to acces the entity
 	#define checs_entity_assert(Type, entity)\
 		{\
 			EntityId const Type##e = entity;\
+			checs_assert_message(getComponentSet(Type), "Component does not exist")\
 			checs_assert(Type##e < getComponentSet(Type)->sparseCapacity);\
 			checs_assert(getComponentSet(Type)->sparse[Type##e] < getComponentSet(Type)->denseCapacity);\
+		}
+
+	#define checs_component_assert(Type)\
+		if (!getComponentSet(Type))\
+		{\
+			printf("Component \"%s\" does not exist\n", #Type);\
+			exit(-1);\
 		}
 #else
 	#define checs_assert(expr) (void)0
 	#define checs_entity_assert(Type, entity) (void)0
+	#define checs_component_assert(Type) (void)0
 #endif
 
 #ifdef CHECS_STATS
@@ -174,8 +190,6 @@ Template;
 #define key_set(key, index) (key |= 1 << index)
 
 
-
-
 void      entityManager_init(uintEC tag_count);
 void 	  entityManager_terminate(void);
 EntityId _entityManager_entity_generate(ComponentKey key);
@@ -247,10 +261,14 @@ void    componentManager_entity_components_add(EntityId entity, ComponentKey key
 	alias = &((Type*)getComponentSet(Type)->components)[getComponentSet(Type)->sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
-#define checs_components_foreach(Type, alias, entityAlias)\
+#define checs_components_foreach(Type, alias, entityAlias, expr)\
+	checs_component_assert(Type);\
 	alias = &((Type*)getComponentSet(Type)->components)[0];\
 	uintEC entityAlias = getComponentSet(Type)->dense[0];\
-	for (uintEC entityAlias##i=0; entityAlias##i < getComponentSet(Type)->denseSize; entityAlias = getComponentSet(Type)->dense[++entityAlias##i], alias = &((Type*)getComponentSet(Type)->components)[entityAlias##i])
+	for (uintEC entityAlias##i=0; entityAlias##i < getComponentSet(Type)->denseSize; entityAlias = getComponentSet(Type)->dense[++entityAlias##i], alias = &((Type*)getComponentSet(Type)->components)[entityAlias##i])\
+	{\
+		expr;\
+	}
 
 #define checs_component_get_once(Type, alias, entity)\
 	checs_entity_assert(Type, entity);\
@@ -270,8 +288,9 @@ by the user) is executed. For example: In the explode-system: a bomb explodes an
 should take damage. creating a system for this would be bad, because its callback is not called that often. So we just fetch all
 entitys everytime we need this functionality. this results also in a much smaller memory use
 smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
-element in the dense array of the componentSet with the smallest number of components, lookup its key and see if it matches the 
+element in the dense array of the componentSet with the smallest number of components, lookup its key and see if it matches the
 required one. This makes iterating pretty fast.*/
+
 
 #define checs_entity_has_component(Type, entity)\
 	({\
@@ -279,12 +298,14 @@ required one. This makes iterating pretty fast.*/
 		key;\
 	})
 
+#define key_evaluate_dev(r, key, Type)\
+	if(!strcmp(#Type, "Template"))\
+		*(key) |= Type.cki;\
+	else\
+		*(key) |= 1 << hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))->cki;
 
 #define key_evaluate(r, key, Type)\
-		*(key) |= 1 << hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))->cki;\
-	/*@ComponentType is the name of the component, that should be converterted to a key and then added to the key-pointer, 
-	given as parameter
-	before we begin the shifting we first have to get the signature of the component */
+	*(key) |= 1 << hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))->cki;
 
 #define components_convertToKey(...)\
 	({\
@@ -294,8 +315,7 @@ required one. This makes iterating pretty fast.*/
 	})
 
 
-void    systemManager_init(uintST n_systemUpdateCount, uintST systemDrawCount, 
-						uintST n_taskUpdateCount, uintST taskDrawCount);
+void    systemManager_init(uintST n_systemUpdateCount, uintST systemDrawCount, uintST n_taskUpdateCount, uintST taskDrawCount);
 void    systemManager_terminate(void);
 void    systemManager_system_register(SystemCallback callback, CallType callType, ComponentKey key, uintEC maxEntitysHint, EntityAddedCallback on_entity_added);
 void    systemManager_update(void);
@@ -356,7 +376,7 @@ extern uint8_t *eventCapacitys;
 #define checs_event_publish(Type, data)\
 	if (hidden->sizes[getEventSig(Type)] == eventCapacitys[getEventSig(Type)])\
 		hidden->events[getEventSig(Type)] = realloc(hidden->events[getEventSig(Type)], (eventCapacitys[getEventSig(Type)] *= 2) * sizeof(Type));\
-	memcpy(&((Type*)hidden->events)[hidden->sizes[getEventSig(Type)]++], &data, sizeof(Type));
+	memcpy(&((Type*)hidden->events)[hidden->sizes[getEventSig(Type)]++], data, sizeof(Type));
 
 #define checs_event_register(Type, maxEventsHint)\
 	eventManager_event_register(hashMap_hash(&eventSignatures, Type));\
