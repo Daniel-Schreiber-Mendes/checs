@@ -397,10 +397,12 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 	_attributeManager_attribute_register(hashMap_hash(&attributes, Type), attributeCount)
 
 #define checs_entity_attribute_add(Type, entity)\
-	vector_push_back(getAttributeVec(Type), EntityId, entity);
+	if (attribute_exists(Type)) { vector_push_back(getAttributeVec(Type), EntityId, entity); }
 
 #define checs_attribute_entity_foreach(Type, entityAlias)\
 	vector_vforeach(getAttributeVec(Type), EntityId, entityAlias)
+
+#define attribute_exists(Type) hashMap_isnull(&attributes, Type, hashMap_hash(&attributes, Type))
 
 
 //component sorting algorithms
@@ -440,6 +442,9 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 #define template_construct(t, ...)\
 	(t)->key = components_convertToKey(__VA_ARGS__)\
 
+
+void fwrite_entity(FILE *file, EntityId e);
+void fread_entity(FILE const* file, EntityId e);
 
 
 #endif
