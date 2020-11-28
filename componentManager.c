@@ -10,11 +10,10 @@ ComponentKey *keys; //array of componentKeys
 static uintEC keysCapacity; //highest id that can be currently stored
 
 
-void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitysHint)
+void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitys)
 {
-	checs_assert(n_componentCount > 0 && maxEntitysHint > 0);
 	hashMap_construct(&sets, (componentCount = n_componentCount));
-	keys = checs_calloc((keysCapacity = maxEntitysHint), sizeof(ComponentKey));
+	keys = checs_calloc(keysCapacity = maxEntitys, sizeof(ComponentKey));
 	setIndices = checs_calloc(componentCount, sizeof(uint16_t));
 }
 
@@ -23,15 +22,6 @@ void componentManager_init(uintCS const n_componentCount, uintEC const maxEntity
 //if an entity gets erased its key is set back to 0. this means if we encounter a key that is not 0, the user forgot to erase that entity
 void componentManager_terminate(void)
 {
-	for (uintEC i=0; i < keysCapacity; ++i)
-	{
-		if (keys[i] != 0)
-		{
-			checs_stats_log(printf("Entity %u had to be cleaned up by checs. Shame on you!\n", i););
-			componentManager_entity_erase(i);
-		}
-	}
-
 	hashMap_foreach(&sets, ComponentSet*, set,
 	({
 		componentSet_destruct(set);
@@ -54,12 +44,6 @@ void componentManager_component_register(ComponentSignature const sig, size_t co
 }
 
 
-void componentManager_entity_register(EntityId const entity, ComponentKey const key)
-{
-	checs_assert(entity < keysCapacity);
-	componentManager_entity_components_add(entity, key);
-}
-
 void componentManager_entity_erase(EntityId const entity)
 {
 	for(uintCS i=0; i < componentCount; ++i)
@@ -77,12 +61,30 @@ void componentManager_entity_erase(EntityId const entity)
 void componentManager_entity_components_add(EntityId const entity, ComponentKey const key)
 {
 	checs_assert(key != 0);
+	if (entity >= keysCapacity)
+	{
+		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity = keysCapacity * 1.2f));
+	}
 	keys[entity] |= key;
 	for(uintCS i=0; i < componentCount; ++i)
 	{
 		if(key_match(1 << i, key))
 		{
 			componentSet_entity_add(hashMap_get(&sets, ComponentSet, setIndices[i]), entity);
+		}
+	}
+}
+
+
+void componentManager_entity_components_remove(EntityId const entity, ComponentKey const key)
+{
+	checs_assert(key != 0 && keys[entity] == keys[entity] | key);
+	keys[entity] -= key;
+	for(uintCS i=0; i < componentCount; ++i)
+	{
+		if(key_match(1 << i, key))
+		{
+			componentSet_entity_remove(hashMap_get(&sets, ComponentSet, setIndices[i]), entity);
 		}
 	}
 }

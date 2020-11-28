@@ -2,13 +2,11 @@
 
 static uintST  systemUpdateCount; //number of systems that are called on update
 static uintST  systemDrawCount; //number of systems that are called on draw
-static uintST  systemCount; //total number of systems
 static System* systems; //array of system callbacks
 static uint8_t systemTypeCounts[2]; 
 
 static uintST  taskUpdateCount; //number of tasks that are called on update
 static uintST  taskDrawCount; //number of tasks that are called on draw
-static uintST  taskCount; //total number of tasks
 static Task*   tasks; //array of task callbacks
 static uint8_t taskTypeCounts[2]; //is used only at beginning of the program so system_task_register knows 
 // at which index to put the task into;
@@ -22,7 +20,7 @@ Systems that are called on update
 |	|	|	|	|	|	|	|	|	|	|
 -----------------------------------------
 ^					^					^
-0           systemUpdateCount        systemCount
+0           systemUpdateCount        systemUpdateCount + systemDrawCount
 */
 
 
@@ -30,24 +28,24 @@ static void tasks_call(uintST i, uintST const i_end);
 static void systems_call(uintST i, uintST const i_end);
 
 
-void systemManager_init(uintST const n_systemUpdateCount, uintST const systemDrawCount, 
-						uintST const n_taskUpdateCount, uintST const taskDrawCount)
+void systemManager_init(uintST const n_systemUpdateCount, uintST const n_systemDrawCount, 
+						uintST const n_taskUpdateCount, uintST const n_taskDrawCount)
 {
 	systemUpdateCount   = n_systemUpdateCount;
-	systemCount         = systemUpdateCount + systemDrawCount;
-	systems             = checs_malloc(sizeof(System) * systemCount);
+	systemDrawCount     = n_systemDrawCount;
+	systems             = checs_malloc(sizeof(System) * (systemUpdateCount + systemDrawCount));
 	systemTypeCounts[1] = systemUpdateCount;
 
 	taskUpdateCount     = n_taskUpdateCount;
-	taskCount           = taskUpdateCount + taskDrawCount;
-	tasks               = checs_malloc(sizeof(Task) * taskCount);
+	taskDrawCount       = n_taskDrawCount;
+	tasks               = checs_malloc(sizeof(Task) * (taskUpdateCount + taskDrawCount));
 	taskTypeCounts[1]   = taskUpdateCount;
 }
 
 
 void systemManager_terminate(void)
 {
-	for(uintST i=0; i < systemCount; ++i)
+	for(uintST i=0; i < systemUpdateCount + systemDrawCount; ++i)
 	{
 		system_destruct(&systems[i]);
 	}
@@ -78,8 +76,8 @@ void systemManager_update(void)
 
 void systemManager_draw(void)
 {
-	tasks_call(taskUpdateCount, taskCount);
-	systems_call(systemUpdateCount, systemCount);
+	tasks_call(taskUpdateCount, taskUpdateCount + taskDrawCount);
+	systems_call(systemUpdateCount, systemUpdateCount + systemDrawCount);
 }
 
 
@@ -97,33 +95,33 @@ static void tasks_call(uintST i, uintST const i_end)
 
 static void systems_call(uintST i, uintST const i_end)
 {
-	while (i < i_end)
+	for (;i < i_end; ++i)
 	{
 		if(systems[i].active)
 		{
 			systems[i].callback(systems[i].sparseSet.dense, systems[i].sparseSet.denseSize);
 		}
-		++i;
 	}
 }
 
 
-void systemManager_entity_register(EntityId const entity, ComponentKey const key)
+EntityId systemManager_entity_register(EntityId const entity, ComponentKey const key)
 {
-	for(uintEC i=0; i < systemCount; ++i)
+	for(uintST i=0; i < systemUpdateCount + systemDrawCount; ++i)
 	{
 		if(key_match(systems[i].key, key))
 		{
 			system_entity_add(&systems[i], entity);
 		}
 	}
+	return entity;
 }
 
 
 //set entity key to 0 because otherwise when iterating over all entitys with a given component, an invalid entityId could be used
 void systemManager_entity_erase(EntityId const entity)
 {
-	for(uintEC i=0; i < systemCount; ++i)
+	for(uintST i=0; i < systemUpdateCount + systemDrawCount; ++i)
 	{
 		if(key_match(systems[i].key, keys[entity]))
 		{			

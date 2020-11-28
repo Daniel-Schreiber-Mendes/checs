@@ -1,9 +1,6 @@
  #include "ecs.h"
 
-//next entityId that will be given. It is NOT the total number of currently used Entitys
-//because unused entitys are stored in the unused entitys stack
-//everytime a new entity is to be created, the entitymanager looks if there is already an entity on the unusedEntitys stack
-//and returns it. only if there are no unused entitys on the stack a completely new entity is used. Its basically Entity-Recycling
+
 static uintEC nextEntityId; 
 static Stack unusedEntitys;
 static EntityId *tags;
@@ -28,7 +25,7 @@ EntityId _entityManager_entity_generate(ComponentKey const key)
 {
 	checs_assert(key != 0);
 	EntityId entity = stack_empty(&unusedEntitys) ? nextEntityId++ : stack_pop(&unusedEntitys, EntityId);
-	componentManager_entity_register(entity, key);
+	componentManager_entity_components_add(entity, key);
 	return entity;
 }
 
