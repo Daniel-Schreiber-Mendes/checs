@@ -17,7 +17,8 @@ void componentSet_construct(ComponentSet* set, size_t const componentSize, Compo
 		.cki = cki, 
 		.componentSize = componentSize,
 		.component_destructor = component_destructor,
-		.component_constructor = component_constructor
+		.component_constructor = component_constructor,
+		.components = checs_malloc(componentSize * maxComponentsHint)
 	};
 }
 
@@ -36,7 +37,6 @@ void componentSet_entity_add(ComponentSet *const set, EntityId const entity)
 	{
 		set->sparse = realloc(set->sparse, sizeof(uintEC) * (set->sparseCapacity = entity * 2));
 	}
-
 	checs_assert(set->denseSize + 1 <= set->denseCapacity);
 	set->dense[set->sparse[entity] = set->denseSize++] = entity;
 

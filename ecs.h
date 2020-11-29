@@ -129,7 +129,7 @@ typedef struct
 	size_t componentSize; //size of component
 	void(*component_destructor)(void*);
 	void(*component_constructor)(void*);
-	char components[]; //type is not char but the type of the components. can not be void because it is a unsized array so no void* is possible
+	void* components; //type is not char but the type of the components. can not be void because it is a unsized array so no void* is possible
 }
 ComponentSet;
 
@@ -197,7 +197,7 @@ EntityId  entityManager_entity_get_by_tag(uintEC tag);
 	})
 
 
-extern HashMap sets; /*in componentManager*/
+extern ComponentSet *sets; /*in componentManager*/
 extern ComponentKey* keys; /*in componentManager*/
 
 void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
@@ -206,35 +206,31 @@ void    componentManager_component_register(ComponentSignature sig, size_t compo
 void    componentManager_entity_erase(EntityId entity);
 void    componentManager_entity_components_add(EntityId entity, ComponentKey key);
 void    componentManager_entity_components_remove(EntityId entity, ComponentKey key);
-#define getComponentSet(Type) hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))
-#define checs_component_register(Type, maxComponentsHint, component_destructor, component_constructor) componentManager_component_register(hashMap_hash(&sets, Type), sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
+#define checs_component_register(sig, Type, maxComponentsHint, component_destructor, component_constructor) componentManager_component_register(sig, sizeof(Type), maxComponentsHint, component_destructor, component_constructor);
 #define checs_component_mut_use(Type, alias) Type *alias
 #define checs_component_use(Type, alias) Type const *alias
 #define checs_entity_components_add(entity, ...) componentManager_entity_components_add(entity, components_convertToKey(__VA_ARGS__))
 #define checs_entity_components_remove(entity, ...) componentManager_entity_components_remove(entity, components_convertToKey(__VA_ARGS__))
 
-#define checs_component_get(Type, alias, entity)\
-	checs_entity_assert(Type, entity);\
-	alias = &((Type*)getComponentSet(Type)->components)[getComponentSet(Type)->sparse[entity]];
+#define checs_component_get(sig, Type, alias, entity)\
+	alias = &((Type*)sets[sig].components)[sets[sig].sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
-#define checs_components_foreach(Type, alias, entityAlias, expr)\
-	checs_component_assert(Type);\
-	alias = &((Type*)getComponentSet(Type)->components)[0];\
-	uintEC entityAlias = getComponentSet(Type)->dense[0];\
-	for (uintEC entityAlias##i=0; entityAlias##i < getComponentSet(Type)->denseSize; entityAlias = getComponentSet(Type)->dense[++entityAlias##i], alias = &((Type*)getComponentSet(Type)->components)[entityAlias##i])\
+#define checs_components_foreach(sig, Type, alias, entityAlias, expr)\
+	alias = &((Type*)sets[sig].components)[0];\
+	uintEC entityAlias = sets[sig].dense[0];\
+	for (uintEC entityAlias##i=0; entityAlias##i < sets[sig].denseSize; entityAlias = sets[sig].dense[++entityAlias##i], alias = &((Type*)sets[sig].components)[entityAlias##i])\
 	{expr;}
 
-#define checs_component_get_once(Type, alias, entity)\
-	checs_entity_assert(Type, entity);\
-	Type *const alias = &(((Type*)(getComponentSet(Type)->components))[getComponentSet(Type)->sparse[entity]]);
+#define checs_component_get_once(sig, Type, alias, entity)\
+	Type *const alias = &(((Type*)(sets[sig].components))[sets[sig].sparse[entity]]);
 
 #define checs_componentMatches_foreach(entityAlias, smallestTypeHint, ...)\
-	for (uintEC entityAlias##i=0, entityAlias=getComponentSet(smallestTypeHint)->dense[entityAlias##i], key=keys[entityAlias]; entityAlias##i < getComponentSet(smallestTypeHint)->denseSize; ++entityAlias##i, key = keys[++entityAlias])\
+	for (uintEC entityAlias##i=0, entityAlias=sets[smallestTypeHint].dense[entityAlias##i], key=keys[entityAlias]; entityAlias##i < sets[smallestTypeHint].denseSize; ++entityAlias##i, key = keys[++entityAlias])\
 		if (key_match(components_convertToKey(__VA_ARGS__), key))
 
 //iterates over all entitys inside the sparseset of an component without getting components
-#define checs_component_entity_foreach(Type, entityAlias, expr) for (uintEC entityAlias##i=0, entityAlias=getComponentSet(Type)->dense[entityAlias##i]; entityAlias##i < getComponentSet(Type)->denseSize; ++entityAlias##i) {expr;}
+#define checs_component_entity_foreach(sig, entityAlias, expr) for (uintEC entityAlias##i=0, entityAlias=sets[sig].dense[entityAlias##i]; entityAlias##i < sets[sig].denseSize; ++entityAlias##i) {expr;}
 /*entity is the alias that is going to be used for the next entity in the array that matches the key
 iterates over all entitys in the componentSet with the smallest size. it then looks up the key of the entity in the keys[] array.
 if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
@@ -246,23 +242,14 @@ element in the dense array of the componentSet with the smallest number of compo
 required one. This makes iterating pretty fast.*/
 
 
-#define checs_entity_has_component(Type, entity) (ComponentKey key = (1 << hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))->cki) | keys[entity])
-#define key_evaluate(r, key, Type) key |= 1 << hashMap_get(&sets, ComponentSet, hashMap_hash(&sets, Type))->cki;
+#define checs_entity_has_component(sig, entity) (ComponentKey key = (1 << sets[sig].cki) | keys[entity])
 
+
+#define key_evaluate(r, key, signature) key |= 1 << signature;
 #define components_convertToKey(...)\
-	({\
-		ComponentKey key = 0;\
-		BOOST_PP_SEQ_FOR_EACH(key_evaluate, key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
-		key;\
-	})
-
-
-#define key_evaluate_dev(r, key, signature) key |= 1 << signature;
-
-#define components_convertToKey_dev(...)\
     ({\
         ComponentKey key = 0;\
-        BOOST_PP_SEQ_FOR_EACH(key_evaluate_dev, key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
+        BOOST_PP_SEQ_FOR_EACH(key_evaluate, key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
         key;\
     })
 
