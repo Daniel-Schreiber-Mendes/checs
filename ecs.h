@@ -93,15 +93,16 @@ typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated. this 
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
 typedef uint16_t uintEC; //any number that stores values that goes from 0 to the maximum value EntityId can hold
 typedef uint8_t uintST; //any number that goes from 0 to the maximum number of systems/tasks
-typedef HashKey ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
 typedef uint8_t ComponentKeyIndex; //this is the place of the bit that indicates that an entity has this component
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
-typedef uint8_t CommandSignature;
-typedef HashKey EventSignature;
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
 typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
 typedef uint8_t uintA; //stores any number that goes from 0 to the maximum number of attributes
-typedef HashKey AttributeSignature; //the signature of a AttributeType which depends on the order of registering this is the hashed value of the name of the attribute
+typedef uintA AttributeSignature; //the signature of a AttributeType which depends on the order of registering this is the hashed value of the name of the attribute
+typedef uintE EventSignature;
+typedef uintEC ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
+typedef uintC CommandSignature;
+typedef uint16_t EventSize;
 typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
@@ -245,7 +246,7 @@ required one. This makes iterating pretty fast.*/
 #define checs_entity_has_component(sig, entity) (ComponentKey key = (1 << sets[sig].cki) | keys[entity])
 
 
-#define key_evaluate(r, key, signature) key |= 1 << signature;
+#define key_evaluate(r, key, sig) key |= 1 << sig;
 #define components_convertToKey(...)\
     ({\
         ComponentKey key = 0;\
@@ -276,68 +277,40 @@ void system_destruct(System const *sys);
 void system_entity_add(System *sys, EntityId entity);
 void system_entity_remove(System *sys, EntityId entity);
 
-extern HashMap commands;
 
 void    commandManager_init(uintC commandCount);
 void 	commandManager_terminate(void);
 void    commandManager_command_register(CommandSignature sig, uintC callbackCount);
 void    commandManager_command_publish(CommandSignature sig, void* data); /* because only void* are passed this is much faster than passing each element by value*/
 void    commandManager_command_subscribe(CommandSignature sig, CommandCallback callback);
-#define checs_command_register(Type, callbackCount) commandManager_command_register(hashMap_hash(&commands, Type), callbackCount);
-#define checs_command_publish(Type, data) commandManager_command_publish(hashMap_hash(&commands, Type), data);
-#define checs_command_subscribe(Type, callback) commandManager_command_subscribe(hashMap_hash(&commands, Type), callback);
 
 
 void 	eventManager_init(uintE n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
-void 	eventManager_event_register(EventSignature sig);
-#define checs_events_poll(Type, alias, expr) for (Type *alias = &((Type*)exposed->events[getEventSig(Type)])[exposed->sizes[getEventSig(Type)] - 1]; exposed->sizes[getEventSig(Type)]; alias = &((Type*)exposed->events[getEventSig(Type)])[--exposed->sizes[getEventSig(Type)]])\
-{\
-	expr\
-}
-
-extern HashMap eventSignatures; //eventidices inside 
-extern EventQueue *hidden;
+void	eventManager_event_register(EventSignature sig, EventSize size, uintE maxEvents);
+void 	eventManager_event_publish(EventSignature sig, EventSize size, void *data);
+#define checs_event_publish(Type, sig, data) eventManager_event_publish(sig, sizeof(Type), data)
+#define checs_event_register(Type, sig, maxEvents) eventManager_event_register(sig, sizeof(Type), maxEvents)
 extern EventQueue *exposed;
-extern uint8_t *eventCapacitys;
-
-#define getEventSig(Type) ((uint8_t)hashMap_get(&eventSignatures, void, hashMap_hash(&eventSignatures, Type)))
-
-#define checs_event_publish(Type, data)\
-	if (hidden->sizes[getEventSig(Type)] == eventCapacitys[getEventSig(Type)])\
-		hidden->events[getEventSig(Type)] = realloc(hidden->events[getEventSig(Type)], (eventCapacitys[getEventSig(Type)] *= 2) * sizeof(Type));\
-	memcpy(&((Type*)hidden->events)[hidden->sizes[getEventSig(Type)]++], data, sizeof(Type));
-
-#define checs_event_register(Type, maxEventsHint)\
-	eventManager_event_register(hashMap_hash(&eventSignatures, Type));\
-	hidden->events[getEventSig(Type)] = checs_malloc(sizeof(Type) * maxEventsHint);\
-	exposed->events[getEventSig(Type)] = checs_malloc(sizeof(Type) * maxEventsHint);\
-	eventCapacitys[getEventSig(Type)] = maxEventsHint;
+#define checs_events_poll(Type, sig, alias, expr) for (Type *alias = &((Type*)exposed->events[sig])[exposed->sizes[sig] - 1]; exposed->sizes[sig]; alias = &((Type*)exposed->events[sig])[--exposed->sizes[sig]])\
+{\
+	expr;\
+}
+ 
 
 
-extern HashMap attributes;
+
+extern Vector *attributes;
 
 void attributeManager_init(uintA maxAttributesHint);
 void attributeManager_terminate(void);
 void _attributeManager_attribute_register(AttributeSignature sig, uintA attributeCount);
-#define getAttributeVec(Type) hashMap_get(&attributes, Vector, hashMap_hash(&attributes, Type))
-#define checs_attribute_register(Type, attributeCount) _attributeManager_attribute_register(hashMap_hash(&attributes, Type), attributeCount)
+#define checs_attribute_register(sig, attributeCount) _attributeManager_attribute_register(sig, attributeCount)
 #define checs_attribute_define(Type) typedef struct{}Type
-
-
-#define checs_entity_attribute_add(entity_adr, Type)({\
-	checs_assert_msg(attribute_exists(Type), "Attribute does not exist");\
-	vector_push_back_func(getAttributeVec(Type), entity_adr);\
-})
-#define checs_entity_attribute_remove(entity, Type)\
-	({\
- 		checs_assert_msg(attribute_exists(Type), "Attribute does not exist");\
- 		vector_find(getAttributeVec(Type), EntityId, entity);\
- 	})
-
-#define checs_attribute_entity_foreach(Type, entityAlias) vector_vforeach(getAttributeVec(Type), EntityId, entityAlias)
-#define attribute_exists(Type) (hashMap_isnull(&attributes, Type, hashMap_hash(&attributes, Type)))
+#define checs_entity_attribute_add(sig, entity_adr) vector_push_back_func(&attributes[sig], entity_adr)
+#define checs_entity_attribute_remove(sig, entity) vector_find(&attributes[sig], EntityId, entity)
+#define checs_attribute_entity_foreach(sig, entityAlias) vector_vforeach(&attributes[sig], EntityId, entityAlias)
 
 
 #define swap(Type, x, y)\

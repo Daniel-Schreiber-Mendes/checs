@@ -9,17 +9,15 @@
 //systems remove the events is also a bad idea because how does one system know, if every system that needed the events had already
 //polled them? and this is also extremely bad for concurrency. a double buffer solves this. the capacitys array is the same for both
 //buffers because they should always have the same size, only the content should differ.
-static uintE signatureCount;
 static EventQueue eq0, eq1;
-HashMap eventSignatures; //pointer to actual events in the eventqueue's
-EventQueue *hidden = &eq0;
+static uintE signatureCount;
+static EventQueue *hidden = &eq0;
 EventQueue *exposed = &eq1;
-uintE *eventCapacitys; //number of maximum events in each eventqueue
+static uintE *eventCapacitys; //number of maximum events in each eventqueue
  
 void eventManager_init(uintE const n_signatureCount)
 {
-	hashMap_construct(&eventSignatures, (signatureCount = n_signatureCount));
-	eventCapacitys = checs_malloc(signatureCount);
+	eventCapacitys = checs_malloc(signatureCount = n_signatureCount);
 	eq0.events = checs_malloc(sizeof(void**) * signatureCount);
 	eq0.sizes = checs_calloc(signatureCount, 1);
 	eq1.events = checs_malloc(sizeof(void**) * signatureCount);
@@ -34,13 +32,12 @@ void eventManager_terminate(void)
 		checs_free(exposed->events[i]);
 		checs_free(hidden->events[i]);
 	}	
+	*/
 	checs_free(eq0.events);
 	checs_free(eq0.sizes);
 	checs_free(eq1.events);
 	checs_free(eq1.sizes);
 	checs_free(eventCapacitys);
-	hashMap_destruct(&eventSignatures);*/ 
-//crashes if i want to free the memory, needs to be fixed
 }
 
 
@@ -52,7 +49,19 @@ void eventManager_buffers_swap(void)
 }
 
 
-void eventManager_event_register(EventSignature sig)
+void eventManager_event_publish(EventSignature const sig, EventSize const size, void *const data)
 {
-	hashMap_insert(&eventSignatures, sig, signatureCount++);
+	if (hidden->sizes[sig] == eventCapacitys[sig])
+	{
+		hidden->events[sig] = realloc(hidden->events[sig], (eventCapacitys[sig] *= 2) * size);
+	}
+	memcpy((hidden->events + hidden->sizes[sig]++), data, size);
+}
+
+
+void eventManager_event_register(EventSignature const sig, EventSize const size, uintE const maxEvents)
+{
+	hidden->events[sig] = checs_malloc(size * maxEvents);
+	exposed->events[sig] = checs_malloc(size * maxEvents);
+	eventCapacitys[sig] = maxEvents;
 }

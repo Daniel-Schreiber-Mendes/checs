@@ -27,7 +27,7 @@ void componentSet_destruct(ComponentSet *const set)
 {
 	checs_assert(set);
 	checs_free(set->dense);
-	checs_free(set->sparse);
+	checs_free(set->sparse); 
 }
 
 

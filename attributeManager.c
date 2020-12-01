@@ -1,30 +1,29 @@
 #include "ecs.h"
 
-//hashmap of vectors of entitys
-HashMap attributes;
+Vector *attributes;
+static uintA size;
 
 
 void attributeManager_init(uintA const maxAttributesHint)
 {
-	hashMap_construct(&attributes, maxAttributesHint);
+	attributes = checs_malloc(sizeof(Vector) * (size = maxAttributesHint));
 }
 
 
 void _attributeManager_attribute_register(AttributeSignature const sig, uintA const attributeCount)
 {
-	Vector *vec = checs_malloc(sizeof(Vector));
-	vector_construct(vec, sizeof(EntityId));
-	vector_reserve(vec, attributeCount);
-	hashMap_insert(&attributes, sig, vec);
+	checs_assert(sig < size);
+	checs_assert(attributeCount);
+	vector_construct(&attributes[sig], sizeof(EntityId));
+	vector_reserve(&attributes[sig], attributeCount);
 }
 
 
 void attributeManager_terminate(void)
 {
-	hashMap_foreach(&attributes, Vector*, vec,
-	({
-		vector_destruct(vec);
-		checs_free(vec);
-	}));
-	hashMap_destruct(&attributes);
+	for (uintA i=0; i < size; ++i)
+	{
+		vector_destruct(&attributes[i]);
+	}
+	checs_free(attributes);
 }

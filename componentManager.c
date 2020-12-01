@@ -29,6 +29,9 @@ void componentManager_terminate(void)
 
 void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
+	checs_assert(sig < componentCount);
+	checs_assert(maxComponentsHint);
+	checs_assert(componentSize);
 	componentSet_construct(&sets[sig], componentSize, sig, maxComponentsHint, component_destructor, component_constructor);
 }
 

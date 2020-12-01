@@ -1,22 +1,23 @@
 #include "ecs.h"
 
 
-HashMap commands; //map of array of arrays of callbacks that are called when a command occurs
+static Command **commands;
+static uintC size;
 
 
 void commandManager_init(uintC const commandCount)
 {
-	hashMap_construct(&commands, commandCount);
+	commands = checs_malloc(sizeof(Command*) * (size = commandCount));
 }
 
 
 void commandManager_terminate(void)
 {
-	hashMap_foreach(&commands, Command*, command,
-	({
-		checs_free(command);
-	}));
-	hashMap_destruct(&commands);
+	for (uintC i=0; i < size; ++i)
+	{
+		checs_free(commands[i]);
+	}
+	checs_free(commands);
 }
 
 
@@ -25,21 +26,21 @@ void commandManager_command_register(CommandSignature const sig, uintC const cal
 	Command *command = checs_malloc(sizeof(Command) + sizeof(CommandCallback) * callbackCount); //because Command struct has variable size array
 	command->cap = callbackCount;
 	command->size = 0;
-	hashMap_insert(&commands, sig, command);
+	commands[sig] = command;
 }
 
 
 void commandManager_command_publish(CommandSignature const sig, void *const data)
 {
-	for (uint8_t i=0; i < hashMap_get(&commands, Command, sig)->size; ++i)
+	for (uint8_t i=0; i < commands[sig]->size; ++i)
 	{
-		hashMap_get(&commands, Command, sig)->callbacks[i](data);
+		commands[sig]->callbacks[i](data);
 	}
 }
 
 
 void commandManager_command_subscribe(CommandSignature const sig, CommandCallback callback)
 {
-	checs_assert(hashMap_get(&commands, Command, sig)->size < hashMap_get(&commands, Command, sig)->cap)
-	hashMap_get(&commands, Command, sig)->callbacks[hashMap_get(&commands, Command, sig)->size++] = callback;
+	checs_assert(commands[sig]->size < commands[sig]->cap);
+	commands[sig]->callbacks[commands[sig]->size++] = callback;
 }

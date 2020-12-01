@@ -33,6 +33,9 @@
 #define checs_entity_get_by_tag(tag) entityManager_entity_get_by_tag(tag)
 
 #define checs_command_parameters void *const data
+#define checs_command_register(Type, sig, callbackCount) commandManager_command_register(sig, callbackCount);
+#define checs_command_publish(Type, sig, data) commandManager_command_publish(sig, data);
+#define checs_command_subscribe(Type, sig, callback) commandManager_command_subscribe(sig, callback);
 
 #define checs_eventBuffers_swap() eventManager_buffers_swap()
 
