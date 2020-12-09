@@ -8,7 +8,7 @@ static EntityId *tags;
 
 void entityManager_init(uintEC const tag_count)
 {
-	stack_construct(&unusedEntitys, sizeof(EntityId), 16);
+	stack_construct(&unusedEntitys, sizeof(EntityId), 256);
 	tags = checs_malloc(tag_count);
 }
 

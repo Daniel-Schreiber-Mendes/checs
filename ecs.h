@@ -173,11 +173,6 @@ typedef struct
 EventQueue;
 
 
-/*TODO:  
- -creating a seperate memory pool for the values that are passed to the commands
- */
-
-
 #define key_match(requiredKey, providedKey) ({((requiredKey) & (providedKey)) == (requiredKey);})
 
 
@@ -202,9 +197,9 @@ EntityId  entityManager_entity_get_by_tag(uintEC tag);
 
 
 extern ComponentSet *sets; 
-extern ComponentKey* keys; 
+extern ComponentKey *keys; 
 
-void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
+void 	componentManager_init(uintCS n_componentCount);
 void 	componentManager_terminate(void);
 void    componentManager_component_register(ComponentSignature sig, size_t componentSize, uintEC maxComponentsHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
 void    componentManager_entity_erase(EntityId entity);
@@ -222,10 +217,10 @@ void    componentManager_entity_components_remove(EntityId entity, ComponentKey 
 	/*updating the value of the alias for a member of a component*/
 
 #define checs_components_foreach(sig, Type, alias, entityAlias, expr)\
-	alias = &((Type*)sets[sig].components)[0];\
 	uintEC entityAlias __attribute__ ((unused)) = sets[sig].dense[0];\
-	for (uintEC entityAlias##i=0; entityAlias##i < sets[sig].denseSize; entityAlias = sets[sig].dense[++entityAlias##i], alias = &((Type*)sets[sig].components)[entityAlias##i])\
+	for (uintEC entityAlias##i=0; entityAlias##i < sets[sig].denseSize; entityAlias = sets[sig].dense[++entityAlias##i])\
 	{\
+		alias = &((Type*)sets[sig].components)[entityAlias##i];\
 		expr;\
 	}
 
@@ -259,6 +254,8 @@ EntityId    systemManager_entity_register(EntityId entity, ComponentKey key);
 void    	systemManager_entity_erase(EntityId entity);
 void    	systemManager_task_register(TaskCallback callback, CallType callType);
 #define 	checs_system_register(callback, CallType, maxEntitysHint, on_entity_added, ...) systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, on_entity_added);
+#define 	task_helper(r, CallType, task) systemManager_task_register(task, CallType);
+#define 	checs_tasks_register(CallType, ...) BOOST_PP_SEQ_FOR_EACH(task_helper, CallType, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 
 
 void componentSet_construct(ComponentSet* set, size_t componentSize, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*));

@@ -7,10 +7,10 @@ ComponentKey *keys; //array of componentKeys
 static uintEC keysCapacity; //highest id that can be currently stored
 
 
-void componentManager_init(uintCS const n_componentCount, uintEC const maxEntitys)
+void componentManager_init(uintCS const n_componentCount)
 {
 	sets = checs_malloc(sizeof(ComponentSet) * (componentCount = n_componentCount));
-	keys = checs_calloc(keysCapacity = maxEntitys, sizeof(ComponentKey));
+	keys = checs_calloc(keysCapacity = 256, sizeof(ComponentKey));
 }
 
 
