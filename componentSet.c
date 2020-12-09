@@ -2,7 +2,7 @@
 #include <string.h>
 
 
-void componentSet_construct(ComponentSet* set, size_t const componentSize, ComponentKeyIndex const cki, uintEC const maxComponentsHint, 
+void componentSet_construct(ComponentSet* set, size_t const componentSize, uintEC const maxComponentsHint, 
 						 void(*component_destructor)(void *const), void(*component_constructor)(void *const))
 {
 	*set = (ComponentSet)
@@ -13,8 +13,7 @@ void componentSet_construct(ComponentSet* set, size_t const componentSize, Compo
 		.dense = checs_calloc(maxComponentsHint, sizeof(uintEC)), 
 		.denseCapacity = maxComponentsHint, 
 		.denseSize = 0,
-
-		.cki = cki, 
+ 
 		.componentSize = componentSize,
 		.component_destructor = component_destructor,
 		.component_constructor = component_constructor,
@@ -37,7 +36,7 @@ void componentSet_entity_add(ComponentSet *const set, EntityId const entity)
 	{
 		set->sparse = realloc(set->sparse, sizeof(uintEC) * (set->sparseCapacity = entity * 2));
 	}
-	checs_assert(set->denseSize + 1 <= set->denseCapacity);
+	checs_assert_msg(set->denseSize + 1 <= set->denseCapacity, "Too many entitys added to componentset");
 	set->dense[set->sparse[entity] = set->denseSize++] = entity;
 
 	if (set->component_constructor)
@@ -59,11 +58,12 @@ void componentSet_entity_remove(ComponentSet *const set, EntityId const entity)
 	{
 		set->component_destructor(set->components + set->sparse[entity] * set->componentSize);
 	}
-	if(set->sparse[entity] < set->denseSize - 1) //this needs to be checked because if it evaluates to false that means the entity to be removed
+	if(set->sparse[entity] < (set->denseSize - 1))
 	{
-		memcpy(set->components + set->sparse[entity] * set->componentSize, set->components + set->denseSize * set->componentSize, set->componentSize); 
-		set->dense[set->sparse[entity]] = set->dense[set->denseSize];
-		set->sparse[entity] = set->sparse[set->dense[set->denseSize]];
+		memcpy(set->components + set->sparse[entity] * set->componentSize, set->components + (set->denseSize - 1) * set->componentSize, set->componentSize);
+		set->dense[set->sparse[entity]] = set->dense[set->denseSize - 1];
+		set->sparse[set->dense[set->denseSize - 1]] = set->sparse[entity];
+
 	}
 	--set->denseSize;
 }

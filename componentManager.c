@@ -29,10 +29,10 @@ void componentManager_terminate(void)
 
 void componentManager_component_register(ComponentSignature const sig, size_t const componentSize, uintEC const maxComponentsHint, void(*component_destructor)(void *const), void(*component_constructor)(void*const))
 {
-	checs_assert(sig < componentCount);
-	checs_assert(maxComponentsHint);
-	checs_assert(componentSize);
-	componentSet_construct(&sets[sig], componentSize, sig, maxComponentsHint, component_destructor, component_constructor);
+	checs_assert_msg(sig < componentCount, "Too many components registered");
+	checs_assert_msg(maxComponentsHint, "Component with 0 maximum count registered");
+	checs_assert_msg(componentSize, "Empty component registered. Use Attribute instead.");
+	componentSet_construct(&sets[sig], componentSize, maxComponentsHint, component_destructor, component_constructor);
 }
 
 
@@ -45,6 +45,7 @@ void componentManager_entity_erase(EntityId const entity)
 			componentSet_entity_remove(&sets[i], entity);
 		}
 	}
+	keys[entity] = 0;
 }
 
 
@@ -52,11 +53,15 @@ void componentManager_entity_erase(EntityId const entity)
 //all components the entity has. because of this it is important that key is used when iterating over all sparsesets.
 void componentManager_entity_components_add(EntityId const entity, ComponentKey const key)
 {
-	checs_assert(key != 0);
 	if (entity >= keysCapacity)
 	{
 		keys = realloc(keys, sizeof(ComponentKey) * (keysCapacity = keysCapacity * 1.2f));
 	}
+	if (keys[entity] | key == keys[entity]) //if entity already has component
+	{
+		return;
+	}
+
 	keys[entity] |= key;
 
 	for(uintCS i=0; i < componentCount; ++i)
@@ -71,7 +76,7 @@ void componentManager_entity_components_add(EntityId const entity, ComponentKey 
 
 void componentManager_entity_components_remove(EntityId const entity, ComponentKey const key)
 {
-	checs_assert(key != 0 && keys[entity] == keys[entity] | key);
+	checs_assert_msg(keys[entity] == keys[entity] | key, "Couldn't remove component because entity does not have this component");
 	keys[entity] -= key;
 	for(uintCS i=0; i < componentCount; ++i)
 	{

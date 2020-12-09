@@ -3,6 +3,8 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/variadic/to_seq.hpp>
 #include <boost/preprocessor/stringize.hpp>
+#include <boost/preprocessor/control/if.hpp>
+#include <boost/preprocessor/facilities/expand.hpp>
 #include <checl/containers.h>
 #include <stdlib.h>
 
@@ -57,18 +59,14 @@
 	#define checs_assert_msg(expr, msg)\
 		if (!(expr))\
 		{\
-			printf("%s\nChecs-Assertion: %s failed.\nLine: %u, File: %s\n", msg, #expr, __LINE__, __FILE__);\
+			printf("\033[0;33m");\
+			printf("Checs-Assertion failed:\n%s\nLine: %u\nFile: %s\n", msg, __LINE__, __FILE__);\
+			printf("\033[0m");\
 			exit(-1);\
 		}
 
 	//checks if it is allowed to acces the entity
-	#define checs_entity_assert(Type, entity)\
-		{\
-			EntityId const Type##e = entity;\
-			checs_assert_msg(getComponentSet(Type), "Component does not exist")\
-			checs_assert(Type##e < getComponentSet(Type)->sparseCapacity);\
-			checs_assert(getComponentSet(Type)->sparse[Type##e] < getComponentSet(Type)->denseCapacity);\
-		}
+	#define checs_entity_assert(sig, e) checs_assert_msg(checs_entity_has_component(sig, e), "Entity can not access component")
 
 	#define checs_component_assert(Type)\
 		if (!getComponentSet(Type))\
@@ -78,7 +76,7 @@
 		}
 #else
 	#define checs_assert(expr) (void)0
-	#define checs_entity_assert(Type, entity) (void)0
+	#define checs_entity_assert(sig, e) (void)0
 	#define checs_component_assert(Type) (void)0
 #endif
 
@@ -90,16 +88,18 @@
 
 
 typedef uint16_t ComponentKey; //8bits mean 8 components can be indicated. this is a key which corresponds to an entity
+typedef uint8_t TemplateKey; //every bit indicates one template
+typedef uint8_t TemplateSignature; 
 typedef uint16_t EntityId; //unique identifier for an instanciated entity
 typedef uint16_t uintEC; //any number that stores values that goes from 0 to the maximum value EntityId can hold
 typedef uint8_t uintST; //any number that goes from 0 to the maximum number of systems/tasks
-typedef uint8_t ComponentKeyIndex; //this is the place of the bit that indicates that an entity has this component
 typedef uint8_t uintCS; //stores any number that goes from 0 to the maximum number of ComponentSignatures
 typedef uint8_t uintC; //stores any number that goes from 0 to the maximum number of commands
-typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of eventtypes
+typedef uint8_t uintE; //stores any number that goes from 0 to the maximum number of events
 typedef uint8_t uintA; //stores any number that goes from 0 to the maximum number of attributes
+typedef TemplateKey uintT;
 typedef uintA AttributeSignature; //the signature of a AttributeType which depends on the order of registering this is the hashed value of the name of the attribute
-typedef uintE EventSignature;
+typedef uint8_t EventSignature;
 typedef uintEC ComponentSignature;//the signature of a ComponentType which depends on the order of registering this is the hashed value of the name of the component
 typedef uintC CommandSignature;
 typedef uint16_t EventSize;
@@ -107,6 +107,10 @@ typedef void(*SystemCallback)(EntityId *entitys, uintEC size);
 typedef void(*TaskCallback)(void);
 typedef void(*CommandCallback)(void*);
 typedef void(*EntityAddedCallback)(EntityId);
+typedef void(*TemplateCallback)(EntityId);
+
+
+#define CHECS_NO_TEMPLATE -1
 
 
 typedef enum
@@ -126,7 +130,6 @@ typedef struct
 	uintEC denseCapacity; //maximum number of elements
 	uintEC denseSize; //current number of elements;
 
-	ComponentKeyIndex cki; //signature of components that are stored
 	size_t componentSize; //size of component
 	void(*component_destructor)(void*);
 	void(*component_constructor)(void*);
@@ -184,22 +187,22 @@ EntityId _entityManager_entity_generate(ComponentKey key);
 void      entityManager_entity_erase(EntityId e);
 void      entitymanager_entity_tag_add(EntityId entity, uintEC tag);
 EntityId  entityManager_entity_get_by_tag(uintEC tag);
-#define   checs_entity_generate(...) (systemManager_entity_register(_entityManager_entity_generate(components_convertToKey(__VA_ARGS__)), components_convertToKey(__VA_ARGS__)))
+#define   checs_entity_generate(template, ...)\
+({\
+	EntityId entity = _entityManager_entity_generate(components_convertToKey(__VA_ARGS__));\
+	if (template != CHECS_NO_TEMPLATE)\
+	{\
+		templateManager_entity_templates_add(entity, 1 << template);\
+	}\
+ 	systemManager_entity_register(entity, components_convertToKey(__VA_ARGS__));\
+ 	entity;\
+})
+
 #define   checs_entity_foreach(entityAlias, expr) for (uintEC entityAlias##i=0, entityAlias=entitys[0]; entityAlias##i < entityCount; entityAlias = entitys[++entityAlias##i]) {expr}//called inside system
 
 
-//can be used to manipulate the entity and its components before it gets registered by systems. this can be useful if you want to for example sort a newly added 
-//entity in a system based on an value that has to be known before the EntityRegisteredCallback callback gets called
-#define   checs_entity_generate_in_place(entityAlias, expr, ...)\
-	({\
-		EntityId const entityAlias = _entityManager_entity_generate(components_convertToKey(__VA_ARGS__)); \
-		(expr);\
-		systemManager_entity_register(entityAlias, components_convertToKey(__VA_ARGS__));\
-	})
-
-
-extern ComponentSet *sets; /*in componentManager*/
-extern ComponentKey* keys; /*in componentManager*/
+extern ComponentSet *sets; 
+extern ComponentKey* keys; 
 
 void 	componentManager_init(uintCS n_componentCount, uintEC maxEntitysHint);
 void 	componentManager_terminate(void);
@@ -214,45 +217,37 @@ void    componentManager_entity_components_remove(EntityId entity, ComponentKey 
 #define checs_entity_components_remove(entity, ...) componentManager_entity_components_remove(entity, components_convertToKey(__VA_ARGS__))
 
 #define checs_component_get(sig, Type, alias, entity)\
+	checs_entity_assert(sig, entity);\
 	alias = &((Type*)sets[sig].components)[sets[sig].sparse[entity]];
 	/*updating the value of the alias for a member of a component*/
 
 #define checs_components_foreach(sig, Type, alias, entityAlias, expr)\
 	alias = &((Type*)sets[sig].components)[0];\
-	uintEC entityAlias = sets[sig].dense[0];\
+	uintEC entityAlias __attribute__ ((unused)) = sets[sig].dense[0];\
 	for (uintEC entityAlias##i=0; entityAlias##i < sets[sig].denseSize; entityAlias = sets[sig].dense[++entityAlias##i], alias = &((Type*)sets[sig].components)[entityAlias##i])\
-	{expr;}
+	{\
+		expr;\
+	}
 
 #define checs_component_get_once(sig, Type, alias, entity)\
-	Type *const alias = &(((Type*)(sets[sig].components))[sets[sig].sparse[entity]]);
+	checs_entity_assert(sig, entity);\
+	Type *const alias = &((Type*)sets[sig].components)[sets[sig].sparse[entity]];
 
-#define checs_componentMatches_foreach(entityAlias, smallestTypeHint, ...)\
+#define checs_componentMatches_foreach(entityAlias, smallestTypeHint, expr, ...)\
 	for (uintEC entityAlias##i=0, entityAlias=sets[smallestTypeHint].dense[entityAlias##i], key=keys[entityAlias]; entityAlias##i < sets[smallestTypeHint].denseSize; ++entityAlias##i, key = keys[++entityAlias])\
-		if (key_match(components_convertToKey(__VA_ARGS__), key))
-
-//iterates over all entitys inside the sparseset of an component without getting components
-#define checs_component_entity_foreach(sig, entityAlias, expr) for (uintEC entityAlias##i=0, entityAlias=sets[sig].dense[entityAlias##i]; entityAlias##i < sets[sig].denseSize; ++entityAlias##i) {expr;}
-/*entity is the alias that is going to be used for the next entity in the array that matches the key
-iterates over all entitys in the componentSet with the smallest size. it then looks up the key of the entity in the keys[] array.
-if the found key matches the required key, the code in the brackets after the if statement(the brackets and whats inside is written 
-by the user) is executed. For example: In the explode-system: a bomb explodes and every entity around it
-should take damage. creating a system for this would be bad, because its callback is not called that often. So we just fetch all
-entitys everytime we need this functionality. this results also in a much smaller memory use
-smallestComponentTypeHint is the component specified by the user which he thinks has the smallest number of elements. For each
-element in the dense array of the componentSet with the smallest number of components, lookup its key and see if it matches the
-required one. This makes iterating pretty fast.*/
+	{\
+		if (key_match(components_convertToKey(__VA_ARGS__), key))\
+		{\
+			expr;\
+		}\
+	}
 
 
-#define checs_entity_has_component(sig, entity) (ComponentKey key = (1 << sets[sig].cki) | keys[entity])
-
-
-#define key_evaluate(r, key, sig) key |= 1 << sig;
-#define components_convertToKey(...)\
-    ({\
-        ComponentKey key = 0;\
-        BOOST_PP_SEQ_FOR_EACH(key_evaluate, key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))\
-        key;\
-    })
+#define checs_component_entity_foreach(sig, entityAlias, expr) for (uintEC checs_i=0, entityAlias=sets[sig].dense[checs_i]; checs_i < sets[sig].denseSize; ++checs_i) {expr;}
+#define checs_component_count(sig) sets[sig].denseSize
+#define checs_entity_has_component(sig, entity) ((1 << sig) & keys[entity])
+#define key_evaluate(r, key, sig) | (1 << sig)
+#define components_convertToKey(...) (0 BOOST_PP_SEQ_FOR_EACH(key_evaluate, key, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)))
 
 
 void    	systemManager_init(uintST n_systemUpdateCount, uintST n_systemDrawCount, uintST n_taskUpdateCount, uintST taskDrawCount);
@@ -266,7 +261,7 @@ void    	systemManager_task_register(TaskCallback callback, CallType callType);
 #define 	checs_system_register(callback, CallType, maxEntitysHint, on_entity_added, ...) systemManager_system_register(callback, CallType, components_convertToKey(__VA_ARGS__), maxEntitysHint, on_entity_added);
 
 
-void componentSet_construct(ComponentSet* set, size_t componentSize, ComponentKeyIndex cki, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
+void componentSet_construct(ComponentSet* set, size_t componentSize, uintEC maxComponentsDevnHint, void(*component_destructor)(void*), void(*component_constructor)(void*));
 void componentSet_destruct(ComponentSet *set);
 void componentSet_entity_add(ComponentSet *set, EntityId entity);
 void componentSet_entity_remove(ComponentSet *set, EntityId entity);
@@ -284,19 +279,26 @@ void    commandManager_command_register(CommandSignature sig, uintC callbackCoun
 void    commandManager_command_publish(CommandSignature sig, void* data); /* because only void* are passed this is much faster than passing each element by value*/
 void    commandManager_command_subscribe(CommandSignature sig, CommandCallback callback);
 
+#define checs_command_parameters void *const data
+#define checs_command_use(Type, _alias) Type __attribute__ ((alias ("data"))) *const _alias
+
 
 void 	eventManager_init(uintE n_signatureCount);
 void 	eventManager_terminate(void);
 void    eventManager_buffers_swap(void);
 void	eventManager_event_register(EventSignature sig, EventSize size, uintE maxEvents);
 void 	eventManager_event_publish(EventSignature sig, EventSize size, void *data);
-#define checs_event_publish(Type, sig, data) eventManager_event_publish(sig, sizeof(Type), data)
+#define checs_event_publish(Type, sig, data) eventManager_event_publish(sig, sizeof(Type), data);
 #define checs_event_register(Type, sig, maxEvents) eventManager_event_register(sig, sizeof(Type), maxEvents)
+
 extern EventQueue *exposed;
-#define checs_events_poll(Type, sig, alias, expr) for (Type *alias = &((Type*)exposed->events[sig])[exposed->sizes[sig] - 1]; exposed->sizes[sig]; alias = &((Type*)exposed->events[sig])[--exposed->sizes[sig]])\
-{\
-	expr;\
-}
+#define checs_events_poll(Type, sig, alias, expr) \
+	Type *alias;\
+	for (uintE i=0; i < exposed->sizes[sig]; ++i)\
+	{\
+		alias = &((Type*)exposed->events[sig])[i];\
+		expr;\
+	}
  
 
 
@@ -313,20 +315,18 @@ void _attributeManager_attribute_register(AttributeSignature sig, uintA attribut
 #define checs_attribute_entity_foreach(sig, entityAlias) vector_vforeach(&attributes[sig], EntityId, entityAlias)
 
 
-#define swap(Type, x, y)\
+void templateManager_init(uintT templatecount);
+void templateManager_terminate(void);
+void templateManager_template_register(TemplateSignature sig, TemplateCallback cb);
+void templateManager_entity_templates_add(EntityId e, TemplateKey key);
+
+
+#define swap(x, y)\
 	{\
-		Type tmp = x;\
+		__auto_type tmp = x;\
 		x = y;\
 		y = tmp;\
 	}\
-
-#define checs_entitys_swap(Type, e0, e1)\
-	{\
-		ComponentSet *set = getComponentSet(Type);\
-		swap(uintEC, set->sparse[e0], set->sparse[e1]);\
-		swap(uintEC, set->dense[set->sparse[e0]], set->dense[set->sparse[e1]]);\
-		swap(Type, ((Type*)set->components)[set->sparse[e0]], ((Type*)set->components)[set->sparse[e1]]);\
-	}
 
 
 #endif

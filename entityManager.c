@@ -23,7 +23,6 @@ void entityManager_terminate(void)
 
 EntityId _entityManager_entity_generate(ComponentKey const key)
 {
-	checs_assert(key != 0);
 	EntityId entity = stack_empty(&unusedEntitys) ? nextEntityId++ : stack_pop(&unusedEntitys, EntityId);
 	componentManager_entity_components_add(entity, key);
 	return entity;
@@ -32,7 +31,6 @@ EntityId _entityManager_entity_generate(ComponentKey const key)
 
 void entityManager_entity_erase(EntityId const entity)
 {
-	checs_assert(keys[entity] != 0);
 	stack_push(&unusedEntitys, EntityId, entity);
 	componentManager_entity_erase(entity);
 	systemManager_entity_erase(entity);

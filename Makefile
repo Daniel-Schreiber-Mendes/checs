@@ -1,4 +1,4 @@
-SRC = attributeManager.c entityManager.c system.c commandManager.c eventManager.c systemManager.c componentManager.c componentSet.c
+SRC = attributeManager.c entityManager.c system.c commandManager.c eventManager.c systemManager.c componentManager.c componentSet.c templateManager.c
 OBJ = $(SRC:.c=.o)
 LFLAGS = -shared -o
 CFLAGS = -c -g -fpic -std=c99 -O0

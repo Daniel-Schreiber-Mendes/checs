@@ -13,7 +13,7 @@ static EventQueue eq0, eq1;
 static uintE signatureCount;
 static EventQueue *hidden = &eq0;
 EventQueue *exposed = &eq1;
-static uintE *eventCapacitys; //number of maximum events in each eventqueue
+static uintE *eventCapacitys;
  
 void eventManager_init(uintE const n_signatureCount)
 {
@@ -26,13 +26,13 @@ void eventManager_init(uintE const n_signatureCount)
 
 
 void eventManager_terminate(void)
-{/*
+{
 	for (uintE i=0; i < signatureCount; ++i)
 	{
 		checs_free(exposed->events[i]);
 		checs_free(hidden->events[i]);
 	}	
-	*/
+	
 	checs_free(eq0.events);
 	checs_free(eq0.sizes);
 	checs_free(eq1.events);
@@ -44,8 +44,8 @@ void eventManager_terminate(void)
 //swapping the buffers and then clearing the one that is not going to be polled from the next frame
 void eventManager_buffers_swap(void)
 {
-	swap(EventQueue*, hidden, exposed)
 	memset(exposed->sizes, 0, signatureCount);
+	swap(hidden, exposed);
 }
 
 
@@ -54,8 +54,9 @@ void eventManager_event_publish(EventSignature const sig, EventSize const size, 
 	if (hidden->sizes[sig] == eventCapacitys[sig])
 	{
 		hidden->events[sig] = realloc(hidden->events[sig], (eventCapacitys[sig] *= 2) * size);
+		exposed->events[sig] = realloc(exposed->events[sig], (eventCapacitys[sig] *= 2) * size);
 	}
-	memcpy((hidden->events + hidden->sizes[sig]++), data, size);
+	memcpy((hidden->events[sig] + hidden->sizes[sig]++), data, size);
 }
 
 
